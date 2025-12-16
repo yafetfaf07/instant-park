@@ -29,7 +29,6 @@ model User {
   lastLogin             DateTime?
   // bookings	    Booking[]
   // notifications Notification[]
-  // parkingAvenues ParkingAvenue[]
   // favorites    Favorites[]
   // @@index([location]) // For location filters
 }
@@ -37,4 +36,41 @@ model User {
 enum Gender {
   MALE
   FEMALE
+}
+
+model ParkingAvenue {
+  id	           Int	             @id @default(autoincrement())
+  name           String
+  address        String
+  latitude       String
+  longitude      String
+  workingHrs	   String
+  totalSpots	   Int
+  status	       PARKINGSTATUS
+  currentSpots	 Int
+  photoUrl	     String
+  createdAt	     DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+enum PARKINGSTATUS {
+  OPEN
+  CLOSED
+  MAINTENANCE
+}
+
+model Admin {
+  id	           Int	           @id @default(autoincrement())
+  username       String          @unique
+  password       String
+  createdAt	     DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model ParkingAvenueOwner {
+  id	           Int	           @id @default(autoincrement())
+  username       String          @unique
+  password       String
+  createdAt	     DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
