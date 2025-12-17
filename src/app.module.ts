@@ -5,9 +5,10 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { ParkingAvenueModule } from './parking-avenue/parking-avenue.module';
 import { AdminModule } from './admin/admin.module';
+import { ParkingAvenueOwnerModule } from './parking-avenue-owner/parking-avenue-owner.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, ParkingAvenueModule, AdminModule],
+  imports: [DatabaseModule, AuthModule, ParkingAvenueModule, AdminModule, ParkingAvenueOwnerModule],
   controllers: [AppController],
   providers: [AppService],
 })
