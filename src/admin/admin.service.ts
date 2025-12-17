@@ -64,7 +64,7 @@ export class AdminService {
         throw new UnauthorizedException('Invalid password credentials');
       }
 
-      await this.db.user.update({
+      await this.db.admin.update({
           where: {
               id: user!.id,
           },

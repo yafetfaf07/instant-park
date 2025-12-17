@@ -10,7 +10,7 @@ export class ParkingAvenueOwnerService {
  
   constructor( private readonly db: DatabaseService, private readonly jwtService: JwtService,) {}
   
-      async register(createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto, userId: number) {
+      async register(createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto, userId: string) {
 
         const adminCheck = await this.db.admin.findUnique({
           where: { id: userId },
@@ -73,7 +73,7 @@ export class ParkingAvenueOwnerService {
           throw new UnauthorizedException('Invalid password credentials');
         }
   
-        await this.db.user.update({
+        await this.db.parkingAvenueOwner.update({
             where: {
                 id: user!.id,
             },

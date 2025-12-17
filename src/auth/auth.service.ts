@@ -99,7 +99,7 @@ export class AuthService {
         return { accessToken };
   }
 
-  async getProfile(id: number) {
+  async getProfile(id: string) {
     const user = await this.db.user.findUnique({
       where: { id },
       select: {

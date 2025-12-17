@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
+import type { RequestWithUser } from './express-request-with-user.interface';
 
 interface User {
   id: number;
@@ -42,8 +43,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiBearerAuth('JWT-auth')
-  me(@Req() req: Request) {
-    const id = (req.user as User).id;
+  me(@Req() req: RequestWithUser) {
+    const id = req.user.id;
     return this.auth.getProfile(id);
   }
 
