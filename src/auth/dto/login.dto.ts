@@ -11,7 +11,7 @@ export class LoginDto {
   phoneNo: string;
 
   @ApiProperty({
-    description: 'Password (will be hashed)',
+    description: 'Password',
     example: 'SecurePass123!',
     minLength: 8,
   })

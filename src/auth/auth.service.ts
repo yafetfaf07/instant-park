@@ -29,18 +29,30 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const gender = dto.gender;
 
-    const existingUser = await this.db.user.findFirst({
-      where: { phoneNo: dto.phoneNo },
+    const existingUser = await this.db.customer.findFirst({
+      where:{ 
+        OR: [
+          { phoneNo: dto.phoneNo },
+          { username: dto.username }
+
+      ]
+    }
     });
 
     if (existingUser) {
-      throw new ConflictException('Phone number already in use');
+      if (existingUser.phoneNo === dto.phoneNo) {
+        throw new ConflictException('This phone number is already registered.');
+      }
+      if (existingUser.username === dto.username) {
+        throw new ConflictException('This username is already taken.');
+      }
     }
 
-    const registeredUser = await this.db.user.create({
+    const registeredUser = await this.db.customer.create({
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
+        username: dto.username,
         phoneNo: dto.phoneNo,
         location: dto.location,
         password: hashedPassword,
@@ -50,9 +62,9 @@ export class AuthService {
 
     return {
       user: {
-        id: registeredUser.id,
         phoneNo: registeredUser.phoneNo,
         firstName: registeredUser.firstName,
+        username: registeredUser.username,
         lastName: registeredUser.lastName,
         location: registeredUser.location,
         gender: registeredUser.gender,
@@ -70,7 +82,7 @@ export class AuthService {
         throw new BadRequestException('Password is required');
         }
 
-        const user = await this.db.user.findUnique({ where: { phoneNo: dto.phoneNo! } });
+        const user = await this.db.customer.findUnique({ where: { phoneNo: dto.phoneNo! } });
 
         if (dto.phoneNo && !user) {
         throw new NotFoundException('Invalid phone number credentials');
@@ -82,7 +94,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid password credentials');
         }
 
-        await this.db.user.update({
+        await this.db.customer.update({
             where: {
                 id: user!.id,
             },
@@ -100,12 +112,12 @@ export class AuthService {
   }
 
   async getProfile(id: string) {
-    const user = await this.db.user.findUnique({
+    const user = await this.db.customer.findUnique({
       where: { id },
       select: {
-        id: true,
         phoneNo: true,
         firstName: true,
+        username: true,
         lastName: true,
         location: true,
         gender: true,

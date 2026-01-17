@@ -16,10 +16,11 @@ datasource db {
 
 }
 
-model User {
+model Customer {
   id	                  String         @id @default(uuid())
   firstName	            String	
   lastName	            String	
+  username              String         @unique
   phoneNo               String	       @unique
   password              String
   gender                Gender

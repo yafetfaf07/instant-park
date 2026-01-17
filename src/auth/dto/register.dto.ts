@@ -26,6 +26,14 @@ export class RegisterDto {
   lastName: string;
 
   @ApiProperty({
+    description: 'user\'s username',
+    example: '@johndoe',
+  })
+  @IsNotEmpty()
+  @IsString()
+  username: string;
+
+  @ApiProperty({
     description: 'Password (will be hashed)',
     example: 'SecurePass123!',
     minLength: 8,
