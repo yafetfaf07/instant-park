@@ -36,7 +36,6 @@ export class AdminService {
         
       return {
         admin: {
-          id: registeredUser.id,
           username: createAdminDto.username,
         },
         message: 'Registration successful',
@@ -80,4 +79,59 @@ export class AdminService {
 
       return { accessToken };
     }
+
+    async unverifiedParkingAvenueOwners(userId: string) {
+
+      const isAdmin = await this.db.admin.findUnique({
+        where: {
+          id: userId
+        }
+      });
+
+      if(!isAdmin){
+        throw new UnauthorizedException("Only admin can see list of unverified users.")
+      }
+
+      const unverifiedOwnersList = await this.db.parkingAvenueOwner.findMany({
+        where: {
+          isVerified: false
+        },
+        select: {
+          username: true,
+          isVerified: true,
+        }
+      });
+
+      return unverifiedOwnersList;
+
+    }
+
+    async updateVerificationStatus(verificationdto: {username: string, verificationUpdate: boolean}, userId: string){
+      
+      const isAdmin = await this.db.admin.findUnique({
+        where: {
+          id: userId
+        }
+      });
+
+      if(!isAdmin){
+        throw new UnauthorizedException("Only admin can see list of unverified users.")
+      }
+      
+      const username = verificationdto.username
+      const verificationUpdate = verificationdto.verificationUpdate
+
+      const updateStatus = await this.db.parkingAvenueOwner.update({
+        where: {
+          username,
+        },
+        data: {
+          isVerified: verificationUpdate
+        }
+      });
+
+      return updateStatus
+      
+    }
+
 }
