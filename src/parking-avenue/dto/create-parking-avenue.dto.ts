@@ -52,6 +52,11 @@ export class CreateParkingAvenueDto {
   @IsString()
   workingHrs: string;
 
+  @ApiProperty({ description: 'Hourly rate in ETB', example: 50 })
+  @IsNumber()
+  @Min(0)
+  hourlyRate: number;
+
   @ApiProperty({
     description: 'Total number of parking spots available in the avenue',
     example: 50,

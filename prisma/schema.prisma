@@ -30,6 +30,8 @@ model Customer {
   // notifications Notification[]
   // favorites    Favorites[]
   // @@index([location]) // For location filters
+
+  reservations Reservation[]
 }
 
 enum Gender {
@@ -46,12 +48,14 @@ model ParkingAvenue {
   ownerId      String
   owner        ParkingAvenueOwner @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   workingHrs   String
+  hourlyRate   Float
   totalSpots   Int
   status       PARKINGSTATUS
   currentSpots Int
   photoUrl     String
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+  reservations Reservation[]
 }
 
 enum PARKINGSTATUS {
@@ -70,16 +74,35 @@ model Admin {
 }
 
 model ParkingAvenueOwner {
-  id	           String          @id @default(uuid())
-  firstName	     String	
-  lastName	     String
+  id             String          @id @default(uuid())
+  firstName      String
+  lastName       String
   username       String          @unique
   password       String
-  phoneNo        String	         @unique
-  email          String	         @unique
-  createdAt	     DateTime        @default(now())
+  phoneNo        String          @unique
+  email          String          @unique
+  createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   lastLogin      DateTime?
   isVerified     Boolean         @default(false)
   parkingAvenues ParkingAvenue[]
+}
+
+model Reservation {
+  id            String   @id @default(uuid())
+  bookingRef    String   @unique
+  startTime     DateTime
+  endTime       DateTime
+  durationHours Int
+  totalPrice    Float
+  status        String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  qrCode        String?
+
+  userId          String
+  user            Customer   @relation(fields: [userId], references: [id])
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

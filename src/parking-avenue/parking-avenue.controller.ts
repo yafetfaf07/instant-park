@@ -6,6 +6,7 @@ import type { RequestWithUser } from '../auth/express-request-with-user.interfac
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { SearchParkingDto } from './dto/search-parking-avenue.dto';
+import { CreateReservationDto } from './dto/create-reservation.dto';
 
 @Controller('parking-avenue')
 export class ParkingAvenueController {
@@ -38,6 +39,16 @@ export class ParkingAvenueController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.parkingAvenueService.findOne(+id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('reserve')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Book a parking spot' })
+  @ApiResponse({ status: 201, description: 'Reservation created successfully (Pending Payment)' })
+  @ApiResponse({ status: 409, description: 'Conflict: Spot fully booked' })
+  createReservation(@Body() createReservationDto: CreateReservationDto, @Req() req: RequestWithUser) {
+    return this.parkingAvenueService.createReservation(createReservationDto, req.user.id);
   }
 
   @Patch(':id')
