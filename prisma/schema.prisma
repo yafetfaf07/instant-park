@@ -89,17 +89,18 @@ model ParkingAvenueOwner {
 }
 
 model Reservation {
-  id            String   @id @default(uuid())
-  bookingRef    String   @unique
-  startTime     DateTime
-  endTime       DateTime
-  durationHours Int
-  totalPrice    Float
-  status        String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
-  qrCode        String?
+  id                   String   @id @default(uuid())
+  bookingRef           String   @unique
+  startTime            DateTime
+  endTime              DateTime
+  durationHours        Int
+  totalPrice           Float
+  status               String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  qrCode               String?
+  transactionReference String?  @unique
 
   userId          String
-  user            Customer   @relation(fields: [userId], references: [id])
+  user            Customer      @relation(fields: [userId], references: [id])
   parkingAvenueId String
   parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id])
 

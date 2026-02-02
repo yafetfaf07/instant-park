@@ -1,0 +1,1 @@
+isVerified field should be in parkingAvenue instead of parkingAvenueOwner
