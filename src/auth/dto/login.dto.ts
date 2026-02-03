@@ -6,16 +6,8 @@ export class LoginDto {
     description: 'Phone number',
     example: '+1234567890',
   })
-  @IsOptional()
   @IsString()
   phoneNo: string;
 
-  @ApiProperty({
-    description: 'Password',
-    example: 'SecurePass123!',
-    minLength: 8,
-  })
-  @IsNotEmpty()
-  @IsString()
-  password: string;
+
 }

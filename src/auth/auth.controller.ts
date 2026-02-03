@@ -18,23 +18,44 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({ type: RegisterDto })
-  @ApiResponse({ status: 201, description: 'User registered successfully' })
+  @ApiResponse({ status: 201, description: 'Temp user created for now if user verifies otp customer will be created.' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 409, description: 'Conflict, user already exists' })
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
   }
 
-  @Post('login')
-  @ApiOperation({ summary: 'Login user' })
+  @Post('verify')
+  @ApiOperation({ summary: 'Verify otp user recieved' })
+  @ApiBody({ type: RegisterDto })
+  @ApiResponse({ status: 201, description: 'User registered successfully' })
+  verifyOtp(@Body() dto: {otp: string}) {
+    return this.auth.verifyOtp(dto);
+  }
+
+
+  @Post('sendlogin')
+  @ApiOperation({ summary: 'Send Otp to user who is trying to login' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 200,
     description: 'Login successful, returns JWT token',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+  loginSendOtp(@Body() dto: LoginDto) {
+    return this.auth.loginSendOtp(dto);
+  }
+
+  @Post('verifylogin')
+  @ApiOperation({ summary: 'Verify otp to user so they can login' })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful, returns JWT token',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  loginVerifyOtp(@Body() dto: {phoneNo: string, otp: string}) {
+    return this.auth.loginVerifyOtp(dto);
   }
 
   @UseGuards(JwtAuthGuard)

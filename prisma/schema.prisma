@@ -20,12 +20,12 @@ model Customer {
   lastName  String
   username  String    @unique
   phoneNo   String    @unique
-  password  String
   gender    Gender
   location  String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   lastLogin DateTime?
+  vehichles Vehicle[]
   // bookings	    Booking[]
   // notifications Notification[]
   // favorites    Favorites[]
@@ -106,4 +106,34 @@ model Reservation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+
+model Vehicle {
+  id	           Int             @id @default(autoincrement())
+  licensePlate   String          
+  createdAt	     DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ownerId        String
+  owner          Customer        @relation(fields: [ownerId], references: [id])
+  @@unique([ownerId, licensePlate])
+}
+
+model Temp{
+
+  id              String    @id @default(uuid())
+  firstName       String
+  lastName        String
+  username        String    @unique
+  phoneNo         String    @unique
+  gender          Gender
+  location        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLogin       DateTime?
+  verificationId  String
+  code            String    @unique
+
+
+
 }

@@ -34,16 +34,6 @@ export class RegisterDto {
   username: string;
 
   @ApiProperty({
-    description: 'Password (will be hashed)',
-    example: 'SecurePass123!',
-    minLength: 8,
-  })
-  @IsNotEmpty()
-  @IsString()
-  @MinLength(8)
-  password: string;
-
-  @ApiProperty({
     description: 'User gender',
     enum: Gender,
     example: Gender.MALE,

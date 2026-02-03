@@ -6,10 +6,23 @@ import { AuthModule } from './auth/auth.module';
 import { ParkingAvenueModule } from './parking-avenue/parking-avenue.module';
 import { AdminModule } from './admin/admin.module';
 import { ParkingAvenueOwnerModule } from './parking-avenue-owner/parking-avenue-owner.module';
+import { ConfigModule } from '@nestjs/config';
+import { VehicleModule } from './vehicle/vehicle.module';
 import { PaymentModule } from './payment/payment.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, ParkingAvenueModule, AdminModule, ParkingAvenueOwnerModule, PaymentModule],
+  imports: [
+    DatabaseModule, 
+    AuthModule,
+    ParkingAvenueModule, 
+    AdminModule, 
+    ParkingAvenueOwnerModule, PaymentModule,
+    ConfigModule.forRoot({
+      isGlobal: true, 
+      envFilePath: '.env', 
+    }),
+    VehicleModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
