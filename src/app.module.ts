@@ -9,6 +9,7 @@ import { ParkingAvenueOwnerModule } from './parking-avenue-owner/parking-avenue-
 import { ConfigModule } from '@nestjs/config';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { PaymentModule } from './payment/payment.module';
+import { CheckInModule } from './check-in/check-in.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PaymentModule } from './payment/payment.module';
       envFilePath: '.env', 
     }),
     VehicleModule,
+    CheckInModule,
   ],
   controllers: [AppController],
   providers: [AppService],

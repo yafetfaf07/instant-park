@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, Headers, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Headers, HttpCode, HttpStatus, Query, Get } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
@@ -44,5 +44,10 @@ export class PaymentController {
     const rawBody = req.rawBody;
 
     return this.paymentService.processWebhook(payload, signature, rawBody);
+  }
+
+  @Get('verify')
+  verify(@Query('bookingRef') ref: string) {
+    return this.paymentService.verifyPayment(ref);
   }
 }

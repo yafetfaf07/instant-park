@@ -102,9 +102,6 @@ export class PaymentService {
 
         const qrPayload = JSON.stringify({
             ref: reservation.bookingRef,
-            pid: reservation.parkingAvenueId,
-            start: reservation.startTime,
-            end: reservation.endTime,
         });
 
         const qrCodeDataUrl = await QRCode.toDataURL(qrPayload);
@@ -172,9 +169,6 @@ export class PaymentService {
 
         const qrPayload = JSON.stringify({
             ref: reservation.bookingRef,
-            pid: reservation.parkingAvenueId,
-            start: reservation.startTime,
-            end: reservation.endTime,
         });
         const qrCodeDataUrl = await QRCode.toDataURL(qrPayload);
 
@@ -188,5 +182,22 @@ export class PaymentService {
 
         this.logger.log(`Payment confirmed for ${reservation.bookingRef}`);
         return { status: 'success' };
+    }
+
+    async verifyPayment(bookingRef: string) {
+         const reservation = await this.databaseService.reservation.findUnique({
+            where: { bookingRef: bookingRef },
+        });
+
+        if (!reservation) {
+            this.logger.error(`Reservation with ref ${bookingRef} not found`);
+            throw new NotFoundException('Reservation not found');
+        }
+
+        if (reservation.status === 'CONFIRMED') {
+            return { message: 'reservation is confirmed' };
+        } else {
+            return { message: 'reservation not confirmed yet' };
+        }
     }
 }
