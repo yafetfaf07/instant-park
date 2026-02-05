@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import axios from 'axios';
@@ -6,6 +6,7 @@ import * as QRCode from 'qrcode';
 import { env } from 'process';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import * as crypto from 'crypto';
+import { ChapaWebhookDto } from './dto/webhook.dto';
 
 @Injectable()
 export class PaymentService {
@@ -124,15 +125,20 @@ export class PaymentService {
         };
     }
 
-    async processWebhook(signature: string, event: any) {
+    async processWebhook(payload: ChapaWebhookDto, signature?: string, rawBody?: Buffer,) {
         const secret = env.CHAPA_SECRET_KEY;
         if (!secret) {
             throw new Error('CHAPA_SECRET_KEY is not defined');
         }
+        if (!signature) {
+            throw new ForbiddenException('Missing signature');
+        }
+
+        const payloadToHash = rawBody ? rawBody : JSON.stringify(payload);
 
         const hash = crypto
             .createHmac('sha256', secret)
-            .update(JSON.stringify(event))
+            .update(payloadToHash)
             .digest('hex');
 
         if (hash !== signature) {
@@ -140,11 +146,16 @@ export class PaymentService {
             // throw new BadRequestException('Invalid signature'); 
         }
 
-        if (event.status !== 'success') {
+        
+        if (payload.status !== 'success') {
             return { message: 'Ignored: Payment not successful' };
         }
-
-        const tx_ref = event.tx_ref;
+        
+        const tx_ref = payload.tx_ref;
+        if (!tx_ref) {
+            this.logger.warn('Webhook received without tx_ref');
+            return;
+        }
 
         const reservation = await this.databaseService.reservation.findUnique({
             where: { transactionReference: tx_ref },
