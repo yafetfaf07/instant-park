@@ -45,9 +45,4 @@ export class PaymentController {
 
     return this.paymentService.processWebhook(payload, signature, rawBody);
   }
-
-  @Get('verify')
-  verify(@Query('bookingRef') ref: string) {
-    return this.paymentService.verifyPayment(ref);
-  }
 }

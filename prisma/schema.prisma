@@ -32,6 +32,8 @@ model Customer {
   // @@index([location]) // For location filters
 
   reservations Reservation[]
+
+  checkIns CheckIn[]
 }
 
 enum Gender {
@@ -56,6 +58,8 @@ model ParkingAvenue {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   reservations Reservation[]
+
+  checkIns CheckIn[]
 }
 
 enum PARKINGSTATUS {
@@ -117,6 +121,17 @@ model Vehicle {
   ownerId        String
   owner          Customer        @relation(fields: [ownerId], references: [id])
   @@unique([ownerId, licensePlate])
+}
+
+model CheckIn {
+  id              String        @id @default(uuid())
+  licensePlate    String        @unique
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id])
+  userId          String?
+  user            Customer?      @relation(fields: [userId], references: [id])       
+  createdAt	      DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model Temp{

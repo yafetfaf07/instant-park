@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException,  } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, } from '@nestjs/common';
 import { CreateParkingAvenueDto } from './dto/create-parking-avenue.dto';
 import { UpdateParkingAvenueDto } from './dto/update-parking-avenue.dto';
 import { DatabaseService } from '../database/database.service';
@@ -6,10 +6,12 @@ import { SearchParkingDto } from './dto/search-parking-avenue.dto';
 import { ParkingAvenue } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { GetReservationsDto } from './dto/get-reservations.dto';
 
 @Injectable()
 export class ParkingAvenueService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  logger: any;
+  constructor(private readonly databaseService: DatabaseService) { }
 
   async create(createParkingAvenueDto: CreateParkingAvenueDto, userId: string) {
     const parkingAvenueOwnerCheck =
@@ -23,7 +25,7 @@ export class ParkingAvenueService {
       );
     }
 
-    if (!parkingAvenueOwnerCheck.isVerified){
+    if (!parkingAvenueOwnerCheck.isVerified) {
       throw new BadRequestException("Only Verified parking avenue owners can register parking avenues")
     }
 
@@ -84,7 +86,7 @@ export class ParkingAvenueService {
     });
 
     if (conflictingReservations >= parkingSpot.currentSpots) {
-        throw new ConflictException('Parking spot is fully booked for this time slot');
+      throw new ConflictException('Parking spot is fully booked for this time slot');
     }
 
     const totalPrice = parkingSpot.hourlyRate * durationHours;
@@ -111,6 +113,66 @@ export class ParkingAvenueService {
       totalPrice: reservation.totalPrice,
       status: reservation.status
     };
+  }
+
+  async getReservations(parkingAvenueId: string, query: GetReservationsDto) {
+    const { page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const avenue = await this.databaseService.parkingAvenue.findUnique({
+      where: { id: parkingAvenueId },
+    });
+    if (!avenue) {
+      throw new NotFoundException(`Parking avenue #${parkingAvenueId} not found`);
+    }
+
+    const [data, total] = await Promise.all([
+      this.databaseService.reservation.findMany({
+        where: { parkingAvenueId },
+        skip: skip,
+        take: limit,
+        select: {
+          bookingRef: true,
+          startTime: true,
+          endTime: true,
+          totalPrice: true,
+          status: true,
+          user: { select: { firstName: true, lastName: true } }
+        },
+        orderBy: { startTime: 'desc' },
+      }),
+      this.databaseService.reservation.count({
+        where: { parkingAvenueId },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
+    };
+  }
+
+  async verifyPayment(bookingRef: string) {
+    const reservation = await this.databaseService.reservation.findUnique({
+      where: { bookingRef: bookingRef },
+    });
+
+    if (!reservation) {
+      this.logger.error(`Reservation with ref ${bookingRef} not found`);
+      throw new NotFoundException('Reservation not found');
+    }
+
+    if (reservation.status === 'CONFIRMED') {
+      return { message: 'reservation is confirmed' };
+    } else {
+      return { message: 'reservation not confirmed yet' };
+    }
   }
 
   findAll() {
