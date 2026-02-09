@@ -105,17 +105,12 @@ export class AuthService {
                   }
                 })
 
-                return {
-                    customer: {
-                      phoneNo: user.phoneNo,
-                      firstName: user.firstName,
-                      username: user.username,
-                      lastName: user.lastName,
-                      location: user.location,
-                      gender: user.gender,
-                    },
-                    message: 'Registration successful',
-                  }
+                const payload = {
+                        sub: user!.id,
+                    };
+                  const accessToken = this.jwtService.sign(payload);
+                    return { accessToken };
+
                 }
               }
             }
