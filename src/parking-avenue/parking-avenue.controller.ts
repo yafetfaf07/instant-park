@@ -7,10 +7,11 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { SearchParkingDto } from './dto/search-parking-avenue.dto';
 import { CreateReservationDto } from './dto/create-reservation.dto';
+import { GetReservationsDto } from './dto/get-reservations.dto';
 
 @Controller('parking-avenue')
 export class ParkingAvenueController {
-  constructor(private readonly parkingAvenueService: ParkingAvenueService) {}
+  constructor(private readonly parkingAvenueService: ParkingAvenueService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -49,6 +50,26 @@ export class ParkingAvenueController {
   @ApiResponse({ status: 409, description: 'Conflict: Spot fully booked' })
   createReservation(@Body() createReservationDto: CreateReservationDto, @Req() req: RequestWithUser) {
     return this.parkingAvenueService.createReservation(createReservationDto, req.user.id);
+  }
+
+  //@UseGuards(JwtAuthGuard)
+  @Get(':id/reservations')
+  //@ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get paginated reservations for a parking lot' })
+  @ApiResponse({ status: 200, description: 'List of reservations with pagination meta' })
+  async getReservations(
+    @Param('id') id: string,
+    @Query() query: GetReservationsDto,
+    @Req() req: RequestWithUser
+  ) {
+    // TODO: we need to make sure only a warden assigned to the provided parking avenue can access this information
+
+    return this.parkingAvenueService.getReservations(id, query);
+  }
+
+  @Get('reservation/verify')
+  verify(@Query('bookingRef') ref: string) {
+    return this.parkingAvenueService.verifyPayment(ref);
   }
 
   @Patch(':id')
