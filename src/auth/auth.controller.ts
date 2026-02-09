@@ -6,6 +6,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { RequestWithUser } from './express-request-with-user.interface';
+import { VerifyDto } from './dto/verify.dto';
+import { LoginVerifyDto } from './dto/loginVerify.dto';
 
 interface User {
   id: number;
@@ -27,7 +29,7 @@ export class AuthController {
 
   @Post('verify')
   @ApiOperation({ summary: 'Verify otp user recieved' })
-  @ApiBody({ type: RegisterDto })
+  @ApiBody({ type: VerifyDto })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   verifyOtp(@Body() dto: {otp: string}) {
     return this.auth.verifyOtp(dto);
@@ -48,7 +50,7 @@ export class AuthController {
 
   @Post('verifylogin')
   @ApiOperation({ summary: 'Verify otp to user so they can login' })
-  @ApiBody({ type: LoginDto })
+  @ApiBody({ type: LoginVerifyDto })
   @ApiResponse({
     status: 200,
     description: 'Login successful, returns JWT token',
