@@ -8,6 +8,9 @@ import type { RequestWithUser } from 'src/auth/express-request-with-user.interfa
 
 
 @Controller('admin')
+// TODO: role base access required
+// @UseGuards(JwtAuthGuard, AdminGuard) 
+// @ApiBearerAuth('JWT-auth')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
@@ -50,5 +53,10 @@ export class AdminController {
   }
 
 
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get main dashboard stats' })
+  getDashboard() {
+    return this.adminService.getDashboardStats();
+  }
   
 }

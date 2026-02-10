@@ -4,6 +4,7 @@ import { UpdateAdminDto } from './dto/update-admin.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../database/database.service';
+import { ParkingAvenueType } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -134,4 +135,46 @@ export class AdminService {
       
     }
 
+    async getDashboardStats() {
+    const [
+      totalProviders,
+      activeLocations,
+      onStreetSegments,
+      offStreetLots,
+      // TODO: add wardens summary here after the module is created
+      totalUsers,
+      activeReservations,
+      totalRevenue,
+    ] = await Promise.all([
+      this.db.parkingAvenueOwner.count(),
+      this.db.parkingAvenue.count(),
+      this.db.parkingAvenue.count({
+        where: {type: ParkingAvenueType.ON_STREET }, 
+      }),
+      this.db.parkingAvenue.count({
+        where: {type: ParkingAvenueType.OFF_STREET }, 
+      }),
+      this.db.customer.count(),
+      this.db.reservation.count({
+        where: { status: 'CONFIRMED' },
+      }),
+
+      this.db.reservation.aggregate({
+        _sum: { totalPrice: true },
+        where: { status: 'CONFIRMED' },
+      }),
+    ]);
+
+    return {
+      cards: {
+        totalProviders,
+        activeLocations,
+        onStreetSegments,
+        offStreetLots,
+        totalUsers,
+        activeReservations,
+        totalRevenue: totalRevenue._sum.totalPrice || 0,
+      },
+    };
+  }
 }

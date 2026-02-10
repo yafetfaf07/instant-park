@@ -51,6 +51,7 @@ model ParkingAvenue {
   owner        ParkingAvenueOwner @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   workingHrs   String
   hourlyRate   Float
+  type         ParkingAvenueType @default(OFF_STREET)
   totalSpots   Int
   status       PARKINGSTATUS
   currentSpots Int
@@ -66,6 +67,12 @@ enum PARKINGSTATUS {
   OPEN
   CLOSED
   MAINTENANCE
+}
+
+enum ParkingAvenueType {
+  ON_STREET
+  OFF_STREET
+	@@map("PARKINGAVENUETYPE")
 }
 
 model Admin {
