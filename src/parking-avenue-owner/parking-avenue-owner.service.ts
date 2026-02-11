@@ -111,6 +111,7 @@ export class ParkingAvenueOwnerService {
         username: true,
         lastName: true,
         email: true,
+        isVerified: true,
       },
     });
 

@@ -213,4 +213,40 @@ export class ParkingAvenueService {
       },
     };
   }
+
+  async getMyParkingAvenueList(parkingAvenueOwnerId: string){
+    
+    const parkingAvenues = await this.databaseService.parkingAvenue.findMany(
+      {
+        where: {
+          ownerId: parkingAvenueOwnerId
+        }
+      }
+    );
+
+    if(!parkingAvenues){
+      throw new NotFoundException("You do not have any parking avenues");
+    }
+
+    return parkingAvenues;
+  }
+
+    async getMyParkingAvenueDetail(parkingAvenueOwnerId: string, parkingAvenueId: string){
+    
+    const parkingAvenue = await this.databaseService.parkingAvenue.findFirst(
+      {
+        where: {
+          ownerId: parkingAvenueOwnerId,
+          id: parkingAvenueId
+        }
+      }
+    );
+
+    if(!parkingAvenue){
+      throw new NotFoundException("You do not have any parking avenues");
+    }
+
+    return parkingAvenue;
+  }
+
 }
