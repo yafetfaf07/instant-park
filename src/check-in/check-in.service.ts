@@ -1,10 +1,15 @@
 import { Injectable, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateCheckInDto } from './dto/create-check-in.dto';
 import { DatabaseService } from 'src/database/database.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { LiveActivityEvent } from 'src/admin/event/live-activity.event';
 
 @Injectable()
 export class CheckInService {
-    constructor(private readonly databaseService: DatabaseService) { }
+    constructor(
+        private readonly databaseService: DatabaseService,
+        private readonly eventEmitter: EventEmitter2,
+    ) { }
 
     async create(dto: CreateCheckInDto) {
         const existingCheckIn = await this.databaseService.checkIn.findUnique({
@@ -18,7 +23,10 @@ export class CheckInService {
         return this.databaseService.$transaction(async (tx) => {
             const avenue = await tx.parkingAvenue.findUnique({
                 where: { id: dto.parkingAvenueId },
-                select: { currentSpots: true },
+                select: {
+                    name: true, 
+                    currentSpots: true ,
+                },
             });
 
             if (!avenue) {
@@ -35,6 +43,16 @@ export class CheckInService {
                     currentSpots: { decrement: 1 },
                 },
             });
+
+            this.eventEmitter.emit(
+                'live.activity',
+                new LiveActivityEvent(
+                    'WALK_IN',
+                    `Vehicle ${dto.licensePlate} entered ${avenue.name}`,
+                    new Date(),
+                    { plate: dto.licensePlate }
+                )
+            );
 
             return tx.checkIn.create({
                 data: {

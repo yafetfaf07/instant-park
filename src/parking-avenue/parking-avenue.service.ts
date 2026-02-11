@@ -8,11 +8,16 @@ import { CreateReservationDto } from './dto/create-reservation.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { GetReservationsDto } from './dto/get-reservations.dto';
 import { GetCheckInsDto } from './dto/get-check-ins.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { LiveActivityEvent } from 'src/admin/event/live-activity.event';
 
 @Injectable()
 export class ParkingAvenueService {
   logger: any;
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   async create(createParkingAvenueDto: CreateParkingAvenueDto, userId: string) {
     const parkingAvenueOwnerCheck =
@@ -107,6 +112,16 @@ export class ParkingAvenueService {
       },
     });
 
+    this.eventEmitter.emit( // emitting the event
+      'live.activity', // event name
+      new LiveActivityEvent(
+        'RESERVATION',
+        `New reservation at ${parkingSpot.name}`,
+        new Date(),
+        { amount: reservation.totalPrice, parkingId: parkingSpot.id }
+      )
+    );
+
     return {
       message: 'Reservation initiated. Proceed to payment.',
       reservationId: reservation.id,
@@ -195,7 +210,7 @@ export class ParkingAvenueService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' }, 
+        orderBy: { createdAt: 'desc' },
       }),
       this.databaseService.checkIn.count({ where: { parkingAvenueId } }),
     ]);
