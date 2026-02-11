@@ -10,12 +10,8 @@ import { ConfigModule } from '@nestjs/config';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { PaymentModule } from './payment/payment.module';
 import { CheckInModule } from './check-in/check-in.module';
-<<<<<<< HEAD
 import { WardenModule } from './warden/warden.module';
-=======
-
 import { EventEmitterModule } from '@nestjs/event-emitter';
->>>>>>> master
 
 @Module({
   imports: [
