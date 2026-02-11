@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } fro
 import { ParkingAvenueOwnerService } from './parking-avenue-owner.service';
 import { CreateParkingAvenueOwnerDto } from './dto/create-parking-avenue-owner.dto';
 import { UpdateParkingAvenueOwnerDto } from './dto/update-parking-avenue-owner.dto';
+import { LoginParkingAvenueOwnerDto } from './dto/login-parking-avenue-owner.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import type { RequestWithUser } from 'src/auth/express-request-with-user.interface';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -23,7 +24,7 @@ export class ParkingAvenueOwnerController {
   
     @Post('login')
     @ApiOperation({ summary: 'Login parking avenue owner' })
-    @ApiBody({ type: UpdateParkingAvenueOwnerDto })
+    @ApiBody({ type: LoginParkingAvenueOwnerDto })
     @ApiResponse({
       status: 200,
       description: 'Login successful, returns JWT token',

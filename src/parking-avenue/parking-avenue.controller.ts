@@ -9,6 +9,7 @@ import { SearchParkingDto } from './dto/search-parking-avenue.dto';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { GetReservationsDto } from './dto/get-reservations.dto';
 import { GetCheckInsDto } from './dto/get-check-ins.dto';
+import { GetMyParkingAvenueDetailDto } from './dto/get-parking-avenue-detail.dto';
 
 @Controller('parking-avenue')
 export class ParkingAvenueController {
@@ -24,6 +25,22 @@ export class ParkingAvenueController {
   @ApiBearerAuth('JWT-auth')
   create(@Body() createParkingAvenueDto: CreateParkingAvenueDto, @Req() req: RequestWithUser) {
     return this.parkingAvenueService.create(createParkingAvenueDto, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('list')
+  @ApiOperation({ summary: 'Get all the parking avenue you own' })
+  @ApiBearerAuth('JWT-auth')
+  getMyParkingAvenueList( @Req() req: RequestWithUser){
+    return this.parkingAvenueService.getMyParkingAvenueList(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('detail')
+  @ApiOperation({ summary: 'Get a detail of a single parking avenue you own' })
+  @ApiBearerAuth('JWT-auth')
+  getMyParkingAvenueDetail(@Query() getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, @Req() req: RequestWithUser){
+    return this.parkingAvenueService.getMyParkingAvenueDetail(req.user.id, getMyParkingAvenueDetailDto.id);
   }
 
   @Get('search')

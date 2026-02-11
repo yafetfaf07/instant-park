@@ -201,7 +201,6 @@ export class AuthService {
 
       const result = await this.sendOtp(dto.phoneNo)
       const acknowledge = result.acknowledge
-      console.log(result)
       if(acknowledge == 'success'){
         return {response: "OTP sent successfully"}
       }

@@ -9,7 +9,7 @@ import { Observable, fromEvent } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LiveActivityEvent } from './event/live-activity.event';
-
+import { UpdateVerificationDto } from './dto/update-verification-dto';
 
 @Controller('admin')
 // TODO: role base access required
@@ -53,6 +53,7 @@ export class AdminController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('update-verification-status')
+  @ApiBody({ type: UpdateVerificationDto})
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update the verification status of a parking avenue owner'})
     updateVerificationStatus(@Body() verificationdto: {username: string, verificationUpdate: boolean}, @Req() req: RequestWithUser){
