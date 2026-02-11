@@ -26,13 +26,7 @@ model Customer {
   updatedAt DateTime  @updatedAt
   lastLogin DateTime?
   vehichles Vehicle[]
-  // bookings	    Booking[]
-  // notifications Notification[]
-  // favorites    Favorites[]
-  // @@index([location]) // For location filters
-
   reservations Reservation[]
-
   checkIns CheckIn[]
 }
 
@@ -59,7 +53,8 @@ model ParkingAvenue {
   updatedAt    DateTime           @updatedAt
   reservations Reservation[]
 
-  checkIns CheckIn[]
+  checkIns     CheckIn[]
+  warden       Warden[] 
 }
 
 enum PARKINGSTATUS {
@@ -151,4 +146,26 @@ model Temp{
 
 
 
+}
+
+model Warden {
+  id                    String                  @id @default(uuid())
+  firstName             String
+  lastName              String
+  username              String                  @unique
+  phoneNo               String                  @unique
+  gender                Gender
+  currentLocation       String
+  residenceArea         String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  lastLogin             DateTime?
+  wardenStatus          WardenStatus            @default(OFFDUTY)
+  parkingAvenueId       String                  
+  parkingAvenue         ParkingAvenue           @relation(fields: [parkingAvenueId], references: [id])
+}
+
+enum WardenStatus {
+  ONDUTY
+  OFFDUTY
 }

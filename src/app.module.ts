@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { PaymentModule } from './payment/payment.module';
 import { CheckInModule } from './check-in/check-in.module';
+import { WardenModule } from './warden/warden.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CheckInModule } from './check-in/check-in.module';
     }),
     VehicleModule,
     CheckInModule,
+    WardenModule,
   ],
   controllers: [AppController],
   providers: [AppService],
