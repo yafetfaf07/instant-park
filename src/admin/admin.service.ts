@@ -5,6 +5,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../database/database.service';
 import { ParkingAvenueType } from '@prisma/client';
+import { GetByApprovalStatus } from './dto/get-by-approval-status.dto';
+import { UpdateApprovalStatus } from './dto/update-approval-status.dto';
+import { UpdateVerificationDto } from './dto/update-verification-dto';
 
 @Injectable()
 export class AdminService {
@@ -81,25 +84,21 @@ export class AdminService {
       return { accessToken };
     }
 
-    async unverifiedParkingAvenueOwners(userId: string) {
+    async parkingAvenueOwnerStatus(getByApprovalStatus: GetByApprovalStatus, adminId: string) {
 
       const isAdmin = await this.db.admin.findUnique({
         where: {
-          id: userId
+          id: adminId
         }
       });
 
       if(!isAdmin){
-        throw new UnauthorizedException("Only admin can see list of unverified users.")
+        throw new UnauthorizedException("Only admin is allowed to view approval status")
       }
 
       const unverifiedOwnersList = await this.db.parkingAvenueOwner.findMany({
         where: {
-          isVerified: false
-        },
-        select: {
-          username: true,
-          isVerified: true,
+          isVerified: getByApprovalStatus.approvalStatus
         }
       });
 
@@ -107,11 +106,11 @@ export class AdminService {
 
     }
 
-    async updateVerificationStatus(verificationdto: {username: string, verificationUpdate: boolean}, userId: string){
+    async updateVerificationStatus(updateVerificationDto: UpdateVerificationDto, adminId: string){
       
       const isAdmin = await this.db.admin.findUnique({
         where: {
-          id: userId
+          id: adminId
         }
       });
 
@@ -119,15 +118,13 @@ export class AdminService {
         throw new UnauthorizedException("Only admin can see list of unverified users.")
       }
       
-      const username = verificationdto.username
-      const verificationUpdate = verificationdto.verificationUpdate
 
       const updateStatus = await this.db.parkingAvenueOwner.update({
         where: {
-          username,
+          username: updateVerificationDto.username,
         },
         data: {
-          isVerified: verificationUpdate
+          isVerified: updateVerificationDto.approvalStatus
         }
       });
 
@@ -176,5 +173,72 @@ export class AdminService {
         totalRevenue: totalRevenue._sum.totalPrice || 0,
       },
     };
+  }
+
+
+  async getByApprovalStatus(getByApprovalStatus: GetByApprovalStatus, adminId: string){
+
+    const checkAdminId = await this.db.admin.findUnique(
+      {
+        where: {
+          id: adminId
+        }
+      }
+    );
+
+    if(!checkAdminId){
+      throw new NotFoundException("Only admin is allowed to view approval status")
+    }
+
+    const parkingAvenuesByStatus = await this.db.parkingAvenue.findMany(
+      {
+        where: {
+          approvalStatus: getByApprovalStatus.approvalStatus
+        }
+      }
+    );
+
+    return parkingAvenuesByStatus;
+
+  }
+
+  async updateApprovalStatus(updateApprovalStatus: UpdateApprovalStatus, adminId: string){
+
+    const checkAdminId = await this.db.admin.findUnique(
+      {
+        where: {
+          id: adminId
+        }
+      }
+    );
+
+    if(!checkAdminId){
+      throw new NotFoundException("Only admin is allowed to view approval status")
+    }
+
+    const checkParkingAvenue = await this.db.parkingAvenue.findUnique(
+      {
+        where: {
+          id: updateApprovalStatus.id
+        }
+      }
+    );
+
+    if(!checkParkingAvenue){
+      throw new NotFoundException('Parking avenue with this id does not exist')
+    }
+
+    const updateStatus = await this.db.parkingAvenue.update(
+      {
+        where: {
+          id: updateApprovalStatus.id
+        },
+        data: {
+          approvalStatus: updateApprovalStatus.approvalStatus
+        }
+      }
+    );
+
+    return updateStatus
   }
 }

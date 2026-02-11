@@ -1,5 +1,6 @@
-import { IsBoolean, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger'; 
+import { ApprovalStatus } from '@prisma/client';
 
 export class UpdateVerificationDto {
   @ApiProperty({
@@ -10,12 +11,10 @@ export class UpdateVerificationDto {
   @IsNotEmpty()
   username: string;
 
-  @ApiProperty({
-    description: 'Provide true or false value',
-    example: 'True',
-    minLength: 8,
-  })
-  @IsBoolean()
-  @IsNotEmpty()
-  verificationUpdate: boolean;
+   @ApiProperty({
+        description: 'Approval status',
+        enum: ApprovalStatus,
+    })
+    @IsEnum(ApprovalStatus)
+    approvalStatus: ApprovalStatus;
 }

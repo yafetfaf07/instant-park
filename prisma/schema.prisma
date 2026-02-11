@@ -36,26 +36,29 @@ enum Gender {
 }
 
 model ParkingAvenue {
-  id           String             @id @default(uuid())
-  name         String             @unique
-  address      String             @unique
-  latitude     Float
-  longitude    Float
-  ownerId      String
-  owner        ParkingAvenueOwner @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  workingHrs   String
-  hourlyRate   Float
-  type         ParkingAvenueType @default(OFF_STREET)
-  totalSpots   Int
-  status       PARKINGSTATUS
-  currentSpots Int
-  photoUrl     String
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  reservations Reservation[]
+  id                  String             @id @default(uuid())
+  name                String             @unique
+  address             String             @unique
+  latitude            Float
+  longitude           Float
+  ownerId             String
+  owner               ParkingAvenueOwner @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workingHrs          String
+  hourlyRate          Float
+  type                ParkingAvenueType @default(OFF_STREET)
+  totalSpots          Int
+  status              PARKINGSTATUS
+  currentSpots        Int
+  legalDoc            String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  reservations        Reservation[]
+  approvalStatus      ApprovalStatus     @default(UNDERREVIEW)
 
-  checkIns     CheckIn[]
-  warden       Warden[] 
+  checkIns            CheckIn[]
+  warden              Warden[] 
+  parkingAvenueImage ParkingAvenueImage[]
+
 }
 
 enum PARKINGSTATUS {
@@ -80,18 +83,19 @@ model Admin {
 }
 
 model ParkingAvenueOwner {
-  id             String          @id @default(uuid())
-  firstName      String
-  lastName       String
-  username       String          @unique
-  password       String
-  phoneNo        String          @unique
-  email          String          @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  lastLogin      DateTime?
-  isVerified     Boolean         @default(false)
-  parkingAvenues ParkingAvenue[]
+  id                String          @id @default(uuid())
+  firstName         String
+  lastName          String
+  username          String          @unique
+  password          String
+  phoneNo           String          @unique
+  email             String          @unique
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  lastLogin         DateTime?
+  isVerified        ApprovalStatus  @default(UNDERREVIEW)
+  parkingAvenues    ParkingAvenue[]
+  personalId        String
 }
 
 model Reservation {
@@ -175,4 +179,19 @@ model Warden {
 enum WardenStatus {
   ONDUTY
   OFFDUTY
+}
+
+enum ApprovalStatus {
+  
+    UNDERREVIEW 
+    APPROVED 
+    REJECTED 
+}
+
+model ParkingAvenueImage {
+  
+  id                  String             @id @default(uuid())
+  parkingAvenueId     String             
+  parkingAvenue       ParkingAvenue      @relation(fields: [parkingAvenueId], references: [id])
+  photosUrl	          String
 }
