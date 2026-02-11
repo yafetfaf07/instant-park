@@ -3,13 +3,16 @@ import { CreateParkingAvenueDto } from './dto/create-parking-avenue.dto';
 import { UpdateParkingAvenueDto } from './dto/update-parking-avenue.dto';
 import { DatabaseService } from '../database/database.service';
 import { SearchParkingDto } from './dto/search-parking-avenue.dto';
-import { ParkingAvenue } from '@prisma/client';
+import { ApprovalStatus, ParkingAvenue } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { GetReservationsDto } from './dto/get-reservations.dto';
 import { GetCheckInsDto } from './dto/get-check-ins.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LiveActivityEvent } from 'src/admin/event/live-activity.event';
+import { GetNameParkingAvenueDto } from './dto/get-name-parking-avenue.dto';
+import { CreateParkingAvenueImageDto } from './dto/create-parking-avenue-image.dto';
+import { GetMyParkingAvenueDetailDto } from './dto/get-parking-avenue-detail.dto';
 
 @Injectable()
 export class ParkingAvenueService {
@@ -31,8 +34,26 @@ export class ParkingAvenueService {
       );
     }
 
-    if (!parkingAvenueOwnerCheck.isVerified) {
+    if ((parkingAvenueOwnerCheck.isVerified === ApprovalStatus.UNDERREVIEW) || (parkingAvenueOwnerCheck.isVerified === ApprovalStatus.REJECTED)) {
       throw new BadRequestException("Only Verified parking avenue owners can register parking avenues")
+    }
+
+    const existingParkingAvenueCheck = await this.databaseService.parkingAvenue.findFirst({
+      where: {
+        OR: [
+          {name: createParkingAvenueDto.name},
+          {address: createParkingAvenueDto.address}
+        ]
+      }
+    })
+
+    if(existingParkingAvenueCheck){
+      if(existingParkingAvenueCheck.name === createParkingAvenueDto.name){
+        throw new ConflictException('This is name is already taken')
+      }
+      if(existingParkingAvenueCheck.address === createParkingAvenueDto.address){
+        throw new ConflictException('This address is already taken')
+      }
     }
 
     return this.databaseService.parkingAvenue.create({
@@ -253,6 +274,161 @@ export class ParkingAvenueService {
         where: {
           ownerId: parkingAvenueOwnerId,
           id: parkingAvenueId
+        }
+      }
+    );
+
+    if(!parkingAvenue){
+      throw new NotFoundException("You do not have any parking avenues");
+    }
+
+    return parkingAvenue;
+  }
+
+  async getParkingAvenueByName(getParkingAvenueByName: GetNameParkingAvenueDto){
+    
+    const parkingAvenue = await this.databaseService.parkingAvenue.findUnique(
+      {
+        where: {
+          name: getParkingAvenueByName.name
+        },
+        select: {
+          name: true,
+          address: true,
+          workingHrs: true,
+          hourlyRate: true,
+          type: true,
+          totalSpots: true,
+          status: true,
+          currentSpots: true,
+          legalDoc: true
+
+        }
+      }
+    );
+
+    if(!parkingAvenue){
+      throw new NotFoundException("Parking avenue with this name doesn't exist")
+    }
+
+    return parkingAvenue;
+    
+  }
+
+  async update(parkingAvenueId: string, updateParkingAvenueDto: UpdateParkingAvenueDto, parkingAvenueOwnerId: string){
+
+    const parkingAvenueOwnerCheck = await this.databaseService.parkingAvenueOwner.findUnique({
+      where: { id: parkingAvenueOwnerId },
+    });
+    
+    if (!parkingAvenueOwnerCheck) {
+          throw new NotFoundException(
+            'Only parking avenue owners can update warden account',
+          );
+    }
+
+    const parkingAvenue = await this.databaseService.parkingAvenue.findUnique(
+      {
+        where: {
+          id: parkingAvenueId
+        }
+      }
+    );
+
+    if(!parkingAvenue){
+      throw new NotFoundException("Parking avenue does not exist");
+    }
+
+    return this.databaseService.parkingAvenue.update(
+      {
+        where: {
+          id: parkingAvenueId
+        },
+        data: updateParkingAvenueDto
+      }
+    );
+
+  }
+
+  async remove(parkingAvenueId: string, parkingAvenueOwnerId: string){
+
+    const parkingAvenueOwnerCheck = await this.databaseService.parkingAvenueOwner.findUnique({
+      where: { id: parkingAvenueOwnerId },
+    });
+    
+    if (!parkingAvenueOwnerCheck) {
+          throw new NotFoundException(
+            'Only parking avenue owners can delete warden account',
+          );
+    }
+    
+    const parkingAvenue = await this.databaseService.parkingAvenue.findUnique(
+      {
+        where: {
+          id: parkingAvenueId
+        }
+      }
+    )
+
+    if(!parkingAvenue){
+      throw new NotFoundException("Parking Avenue does not exist")
+    }
+
+    const deleteParkingAvenue = await this.databaseService.parkingAvenue.delete(
+      {
+        where: {
+          id: parkingAvenueId
+        }
+      }
+    );
+
+
+  }
+
+  async addImage(createParkingAvenueImageDto: CreateParkingAvenueImageDto, parkingAvenueOwnerId: string){
+
+    const parkingAvenueOwnerCheck =
+      await this.databaseService.parkingAvenueOwner.findUnique({
+        where: { id: parkingAvenueOwnerId },
+      });
+
+    if (!parkingAvenueOwnerCheck) {
+      throw new NotFoundException(
+        'Only parking avenue owners can add image to parking avenues',
+      );
+    }
+
+    const parkingAvenueId = await this.databaseService.parkingAvenue.findUnique(
+      {
+        where: {
+          id: createParkingAvenueImageDto.parkingAvenueId
+        }
+      }
+    );
+
+    if(!parkingAvenueId){
+      throw new NotFoundException("This parking avenue does not exist");
+    }
+
+    return this.databaseService.parkingAvenueImage.create(
+      {
+        data: createParkingAvenueImageDto
+      }
+    );
+
+
+  }
+
+  async getMyParkingAvenueImages(getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, parkingAvenueOwnerId: string){
+
+    const parkingAvenue = await this.databaseService.parkingAvenue.findFirst(
+      {
+        where: {
+          ownerId: parkingAvenueOwnerId,
+          id: getMyParkingAvenueDetailDto.id
+        },
+        select: {
+          parkingAvenueImage: true
         }
       }
     );

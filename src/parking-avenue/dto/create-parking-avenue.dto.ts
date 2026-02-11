@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  Allow,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -8,6 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { PARKINGSTATUS } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class CreateParkingAvenueDto {
   @ApiProperty({
@@ -33,6 +35,7 @@ export class CreateParkingAvenueDto {
   })
   @IsNotEmpty()
   @IsNumber()
+  @Type(() => Number)
   latitude: number;
 
   @ApiProperty({
@@ -42,6 +45,7 @@ export class CreateParkingAvenueDto {
   })
   @IsNotEmpty()
   @IsNumber()
+  @Type(() => Number)
   longitude: number;
 
   @ApiProperty({
@@ -55,6 +59,7 @@ export class CreateParkingAvenueDto {
   @ApiProperty({ description: 'Hourly rate in ETB', example: 50 })
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   hourlyRate: number;
 
   @ApiProperty({
@@ -64,6 +69,7 @@ export class CreateParkingAvenueDto {
   })
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   totalSpots: number;
 
   @ApiProperty({
@@ -80,13 +86,12 @@ export class CreateParkingAvenueDto {
   })
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   currentSpots: number;
 
   @ApiProperty({
-    description: 'URL to the photo/image of the parking avenue',
-    example: 'images/parking-central.jpg',
+    format: 'binary'
   })
-  @IsNotEmpty()
-  @IsString()
-  photoUrl: string;
+  @Allow()
+  legalDoc: string
 }

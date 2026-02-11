@@ -1,25 +1,73 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { ParkingAvenueOwnerService } from './parking-avenue-owner.service';
 import { CreateParkingAvenueOwnerDto } from './dto/create-parking-avenue-owner.dto';
 import { UpdateParkingAvenueOwnerDto } from './dto/update-parking-avenue-owner.dto';
 import { LoginParkingAvenueOwnerDto } from './dto/login-parking-avenue-owner.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import type { RequestWithUser } from 'src/auth/express-request-with-user.interface';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { extname } from 'path';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+
+const diskStorageConfig = diskStorage({
+  destination: 'uploads',
+  filename: (req, file, callback) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = extname(file.originalname);
+    callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  },
+});
 
 @Controller('parking-avenue-owner')
 export class ParkingAvenueOwnerController {
   constructor(private readonly parkingAvenueOwnerService: ParkingAvenueOwnerService) {}
-
+    
+    private cleanupFiles(personalId: string) {
+      
+        if (personalId && fs.existsSync(personalId)) {
+          fs.unlinkSync(personalId);
+        }
+    }
     
     @Post('register')
+    @UseInterceptors(FileInterceptor('personalId', { storage: diskStorageConfig }))
     @ApiOperation({ summary: 'Register a new parking avenue owner' })
     @ApiBody({ type: CreateParkingAvenueOwnerDto })
+    @ApiConsumes('multipart/form-data')
     @ApiResponse({ status: 201, description: 'Parking avenue owner registered successfully' })
     @ApiResponse({ status: 400, description: 'Bad request' })
     @ApiResponse({ status: 409, description: 'Conflict, parking avenue owner already exists' })
-    register(@Body() createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto) {
-      return this.parkingAvenueOwnerService.register(createParkingAvenueOwnerDto);
+    register(
+      @Body() createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto,
+      @UploadedFile() personalId: Express.Multer.File,
+    ) {
+      if (!personalId) {
+        throw new BadRequestException('personalId is required');
+      }
+
+      if (personalId && personalId.size > 2 * 1024 * 1024) {
+        this.cleanupFiles(personalId.path);
+        throw new BadRequestException('Image must be smaller than 2MB');
+      }
+
+      if (!personalId.mimetype.match(/image\/(jpg|jpeg|png)/)) {
+        this.cleanupFiles(personalId.path);
+        throw new BadRequestException(
+          'Only image files (jpg, png, jpeg) are allowed',
+        );
+      }
+
+      createParkingAvenueOwnerDto.personalId = personalId.path;
+      
+      try{
+        return this.parkingAvenueOwnerService.register(createParkingAvenueOwnerDto);
+
+      } catch(error){
+        this.cleanupFiles(personalId.path);
+        throw error;
+      }
     }
   
     @Post('login')

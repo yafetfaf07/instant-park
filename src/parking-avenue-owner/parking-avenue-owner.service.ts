@@ -52,6 +52,7 @@ export class ParkingAvenueOwnerService {
             email: createParkingAvenueOwnerDto.email,
             username: createParkingAvenueOwnerDto.username,
             password: hashedPassword,
+            personalId: createParkingAvenueOwnerDto.personalId
           },
         });
   
