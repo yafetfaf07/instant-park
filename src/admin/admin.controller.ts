@@ -5,7 +5,7 @@ import { UpdateAdminDto } from './dto/update-admin.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import type { RequestWithUser } from 'src/auth/express-request-with-user.interface';
-
+import { UpdateVerificationDto } from './dto/update-verification-dto';
 
 @Controller('admin')
 export class AdminController {
@@ -43,6 +43,7 @@ export class AdminController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('update-verification-status')
+  @ApiBody({ type: UpdateVerificationDto})
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update the verification status of a parking avenue owner'})
     updateVerificationStatus(@Body() verificationdto: {username: string, verificationUpdate: boolean}, @Req() req: RequestWithUser){
