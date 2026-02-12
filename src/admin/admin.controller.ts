@@ -92,6 +92,21 @@ export class AdminController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({summary: 'Get summary of providers and locations'})
+  @Get('getoverview')
+  @ApiBearerAuth('JWT-auth')
+  getGlobalOverview(@Req() req: RequestWithUser){
+    return this.adminService.getGlobalOverview(req.user.id);
+  }
+
+  @Get('get-parking-lots-status')
+  @ApiOperation({summary: 'Get status of parking avenues and their locations to be mapped'})
+  getParkingLotsStatus(@Req() req: RequestWithUser){
+    return this.adminService.getParkingLotsStatus()
+  }
+
+
+  @UseGuards(JwtAuthGuard)
   @Patch('update-approval-statuss')
   @ApiOperation({ summary: 'update the approval status of a parking avenue' })
   @ApiBody({ type: UpdateApprovalStatus})

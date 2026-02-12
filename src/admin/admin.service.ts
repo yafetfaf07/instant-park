@@ -241,4 +241,83 @@ export class AdminService {
 
     return updateStatus
   }
+
+
+  async getGlobalOverview(adminId: string) {
+
+    const checkAdminId = await this.db.admin.findUnique(
+      {
+        where: {
+          id: adminId
+        }
+      }
+    );
+
+    if(!checkAdminId){
+      throw new NotFoundException("Only admin is allowed to view this overview")
+    }
+
+    const [totalProviders, activeLocations, onStreetLots, offStreetLots] = await this.db.$transaction([
+      this.db.parkingAvenueOwner.count(),
+
+    this.db.parkingAvenue.count({
+      where: { status: 'OPEN' }
+    }),
+
+    this.db.parkingAvenue.count({
+      where: { type: 'ON_STREET' }
+    }),
+
+    this.db.parkingAvenue.count({
+      where: { type: 'OFF_STREET' }
+    })
+  ]);
+
+  return {
+    totalProviders,
+    activeLocations,
+    onStreetLots,
+    offStreetLots,
+  };
+}
+
+  async getParkingLotsStatus() {
+
+        
+    const parkingLots = await this.db.parkingAvenue.findMany({
+      select: {
+        name: true,
+        address: true, 
+        latitude: true,
+        longitude: true,
+        totalSpots: true,
+        currentSpots: true,
+      },
+    });
+
+    return parkingLots.map((lot) => {
+      let status: 'AVAILABLE' | 'HIGH_DEMAND' | 'FULL';
+
+      if (lot.currentSpots >= lot.totalSpots) {
+        status = 'FULL';
+      } 
+      else if (lot.currentSpots >= lot.totalSpots * 0.8) {
+        status = 'HIGH_DEMAND';
+      } 
+      else {
+        status = 'AVAILABLE';
+      }
+
+      return {
+        name: lot.name,
+        location: lot.address,
+        coordinates: {
+          lat: lot.latitude,
+          lng: lot.longitude,
+        },
+        status,
+      };
+    });
+  }
+
 }
