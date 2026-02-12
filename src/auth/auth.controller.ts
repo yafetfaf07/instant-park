@@ -56,7 +56,7 @@ export class AuthController {
     description: 'Login successful, returns JWT token',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  loginVerifyOtp(@Body() dto: {phoneNo: string, otp: string}) {
+  loginVerifyOtp(@Body() dto: LoginVerifyDto) {
     return this.auth.loginVerifyOtp(dto);
   }
 

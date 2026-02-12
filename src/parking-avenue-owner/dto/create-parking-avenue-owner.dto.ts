@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MinLength, IsOptional, IsEmail } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength, IsOptional, IsEmail, Allow } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'; 
 
 export class CreateParkingAvenueOwnerDto {
@@ -35,11 +35,10 @@ export class CreateParkingAvenueOwnerDto {
     @IsNotEmpty()
     email: string;
 
-    @ApiPropertyOptional({
+    @ApiProperty({
         description: 'Phone number',
         example: '+251934567890',
       })
-    @IsOptional()
     @IsString()
     phoneNo: string;
     
@@ -52,4 +51,10 @@ export class CreateParkingAvenueOwnerDto {
     @IsNotEmpty()
     @MinLength(8, { message: 'Password must be at least 8 characters long' })
     password: string;
+
+    @ApiProperty({
+        format: 'binary'
+    })
+    @Allow()
+    personalId: string
 }

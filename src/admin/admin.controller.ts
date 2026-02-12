@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req, Patch, Sse } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, Patch, Sse, Query } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
@@ -10,6 +10,8 @@ import { map } from 'rxjs/operators';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LiveActivityEvent } from './event/live-activity.event';
 import { UpdateVerificationDto } from './dto/update-verification-dto';
+import { GetByApprovalStatus } from './dto/get-by-approval-status.dto';
+import { UpdateApprovalStatus } from './dto/update-approval-status.dto';
 
 @Controller('admin')
 // TODO: role base access required
@@ -44,11 +46,11 @@ export class AdminController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('unverified-parking-avenue-owners')
+  @Get('ownerverificationstatus')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List of unverified parking avenue owners'})
-  unverifiedParkingAvenueOwners(@Req() req: RequestWithUser){
-    return this.adminService.unverifiedParkingAvenueOwners(req.user.id)
+  @ApiOperation({ summary: 'Get parking avenue owners by approval status'})
+  parkingAvenueOwnerStatus(@Query() getByApprovalStatus: GetByApprovalStatus, @Req() req: RequestWithUser){
+    return this.adminService.parkingAvenueOwnerStatus(getByApprovalStatus, req.user.id)
   }
 
   @UseGuards(JwtAuthGuard)
@@ -56,8 +58,8 @@ export class AdminController {
   @ApiBody({ type: UpdateVerificationDto})
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update the verification status of a parking avenue owner'})
-    updateVerificationStatus(@Body() verificationdto: {username: string, verificationUpdate: boolean}, @Req() req: RequestWithUser){
-    return this.adminService.updateVerificationStatus(verificationdto,req.user.id)
+    updateVerificationStatus(@Body() updateVerificationdto: UpdateVerificationDto, @Req() req: RequestWithUser){
+    return this.adminService.updateVerificationStatus(updateVerificationdto, req.user.id)
   }
 
 
@@ -80,4 +82,41 @@ export class AdminController {
       }),
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get parking avenue by approval status' })
+  @Get('approvalstatus')
+  @ApiBearerAuth('JWT-auth')
+  getByApprovalStatus(@Query() getByApprovalStatus: GetByApprovalStatus, @Req() req: RequestWithUser){
+    return this.adminService.getByApprovalStatus(getByApprovalStatus, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({summary: 'Get summary of providers and locations'})
+  @Get('getoverview')
+  @ApiBearerAuth('JWT-auth')
+  getGlobalOverview(@Req() req: RequestWithUser){
+    return this.adminService.getGlobalOverview(req.user.id);
+  }
+
+  @Get('get-parking-lots-status')
+  @ApiOperation({summary: 'Get status of parking avenues and their locations to be mapped'})
+  getParkingLotsStatus(@Req() req: RequestWithUser){
+    return this.adminService.getParkingLotsStatus()
+  }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('update-approval-statuss')
+  @ApiOperation({ summary: 'update the approval status of a parking avenue' })
+  @ApiBody({ type: UpdateApprovalStatus})
+  @ApiBearerAuth('JWT-auth')
+  updateApprovalStatus(@Body() updateApprovalStatus: UpdateApprovalStatus, @Req() req: RequestWithUser){
+    return this.adminService.updateApprovalStatus(updateApprovalStatus, req.user.id)
+  }
+
+  
+
+
+
 }

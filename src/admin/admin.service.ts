@@ -5,6 +5,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../database/database.service';
 import { ParkingAvenueType } from '@prisma/client';
+import { GetByApprovalStatus } from './dto/get-by-approval-status.dto';
+import { UpdateApprovalStatus } from './dto/update-approval-status.dto';
+import { UpdateVerificationDto } from './dto/update-verification-dto';
 
 @Injectable()
 export class AdminService {
@@ -81,25 +84,21 @@ export class AdminService {
       return { accessToken };
     }
 
-    async unverifiedParkingAvenueOwners(userId: string) {
+    async parkingAvenueOwnerStatus(getByApprovalStatus: GetByApprovalStatus, adminId: string) {
 
       const isAdmin = await this.db.admin.findUnique({
         where: {
-          id: userId
+          id: adminId
         }
       });
 
       if(!isAdmin){
-        throw new UnauthorizedException("Only admin can see list of unverified users.")
+        throw new UnauthorizedException("Only admin is allowed to view approval status")
       }
 
       const unverifiedOwnersList = await this.db.parkingAvenueOwner.findMany({
         where: {
-          isVerified: false
-        },
-        select: {
-          username: true,
-          isVerified: true,
+          isVerified: getByApprovalStatus.approvalStatus
         }
       });
 
@@ -107,11 +106,11 @@ export class AdminService {
 
     }
 
-    async updateVerificationStatus(verificationdto: {username: string, verificationUpdate: boolean}, userId: string){
+    async updateVerificationStatus(updateVerificationDto: UpdateVerificationDto, adminId: string){
       
       const isAdmin = await this.db.admin.findUnique({
         where: {
-          id: userId
+          id: adminId
         }
       });
 
@@ -119,15 +118,13 @@ export class AdminService {
         throw new UnauthorizedException("Only admin can see list of unverified users.")
       }
       
-      const username = verificationdto.username
-      const verificationUpdate = verificationdto.verificationUpdate
 
       const updateStatus = await this.db.parkingAvenueOwner.update({
         where: {
-          username,
+          username: updateVerificationDto.username,
         },
         data: {
-          isVerified: verificationUpdate
+          isVerified: updateVerificationDto.approvalStatus
         }
       });
 
@@ -177,4 +174,150 @@ export class AdminService {
       },
     };
   }
+
+
+  async getByApprovalStatus(getByApprovalStatus: GetByApprovalStatus, adminId: string){
+
+    const checkAdminId = await this.db.admin.findUnique(
+      {
+        where: {
+          id: adminId
+        }
+      }
+    );
+
+    if(!checkAdminId){
+      throw new NotFoundException("Only admin is allowed to view approval status")
+    }
+
+    const parkingAvenuesByStatus = await this.db.parkingAvenue.findMany(
+      {
+        where: {
+          approvalStatus: getByApprovalStatus.approvalStatus
+        }
+      }
+    );
+
+    return parkingAvenuesByStatus;
+
+  }
+
+  async updateApprovalStatus(updateApprovalStatus: UpdateApprovalStatus, adminId: string){
+
+    const checkAdminId = await this.db.admin.findUnique(
+      {
+        where: {
+          id: adminId
+        }
+      }
+    );
+
+    if(!checkAdminId){
+      throw new NotFoundException("Only admin is allowed to view approval status")
+    }
+
+    const checkParkingAvenue = await this.db.parkingAvenue.findUnique(
+      {
+        where: {
+          id: updateApprovalStatus.id
+        }
+      }
+    );
+
+    if(!checkParkingAvenue){
+      throw new NotFoundException('Parking avenue with this id does not exist')
+    }
+
+    const updateStatus = await this.db.parkingAvenue.update(
+      {
+        where: {
+          id: updateApprovalStatus.id
+        },
+        data: {
+          approvalStatus: updateApprovalStatus.approvalStatus
+        }
+      }
+    );
+
+    return updateStatus
+  }
+
+
+  async getGlobalOverview(adminId: string) {
+
+    const checkAdminId = await this.db.admin.findUnique(
+      {
+        where: {
+          id: adminId
+        }
+      }
+    );
+
+    if(!checkAdminId){
+      throw new NotFoundException("Only admin is allowed to view this overview")
+    }
+
+    const [totalProviders, activeLocations, onStreetLots, offStreetLots] = await this.db.$transaction([
+      this.db.parkingAvenueOwner.count(),
+
+    this.db.parkingAvenue.count({
+      where: { status: 'OPEN' }
+    }),
+
+    this.db.parkingAvenue.count({
+      where: { type: 'ON_STREET' }
+    }),
+
+    this.db.parkingAvenue.count({
+      where: { type: 'OFF_STREET' }
+    })
+  ]);
+
+  return {
+    totalProviders,
+    activeLocations,
+    onStreetLots,
+    offStreetLots,
+  };
+}
+
+  async getParkingLotsStatus() {
+
+        
+    const parkingLots = await this.db.parkingAvenue.findMany({
+      select: {
+        name: true,
+        address: true, 
+        latitude: true,
+        longitude: true,
+        totalSpots: true,
+        currentSpots: true,
+      },
+    });
+
+    return parkingLots.map((lot) => {
+      let status: 'AVAILABLE' | 'HIGH_DEMAND' | 'FULL';
+
+      if (lot.currentSpots >= lot.totalSpots) {
+        status = 'FULL';
+      } 
+      else if (lot.currentSpots >= lot.totalSpots * 0.8) {
+        status = 'HIGH_DEMAND';
+      } 
+      else {
+        status = 'AVAILABLE';
+      }
+
+      return {
+        name: lot.name,
+        location: lot.address,
+        coordinates: {
+          lat: lot.latitude,
+          lng: lot.longitude,
+        },
+        status,
+      };
+    });
+  }
+
 }

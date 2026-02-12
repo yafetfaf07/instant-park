@@ -14,6 +14,7 @@ import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../database/database.service';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
+import { LoginVerifyDto } from './dto/loginVerify.dto';
 
 
 @Injectable()
@@ -112,13 +113,19 @@ export class AuthService {
                     return { accessToken };
 
                 }
+
               }
             }
           
           catch (error) {
             throw error.response?.data || error.message;
         }
-  }
+        
+        
+      }else{
+        return 'Invalid or expired OTP';
+
+      }
     
 
   }
@@ -153,36 +160,43 @@ export class AuthService {
     const verificationId = result.response.verificationId;
     const code  = result.response.code;
 
-    if (acknowledge == 'success')
-      {
-        const registeredUser = await this.db.temp.create({
-          data: {
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            username: dto.username,
-            phoneNo: dto.phoneNo,
-            location: dto.location,
-            gender: gender,
-            verificationId: verificationId,
-            code: code
-          },
-        });
+    try{
 
-        return {
-          temp: {
-            phoneNo: registeredUser.phoneNo,
-            firstName: registeredUser.firstName,
-            username: registeredUser.username,
-            lastName: registeredUser.lastName,
-            location: registeredUser.location,
-            gender: registeredUser.gender,
-          },
-          message: 'Temp account created verify your account with otp you recieved',
+    
+      if (acknowledge == 'success')
+        {
+          const registeredUser = await this.db.temp.create({
+            data: {
+              firstName: dto.firstName,
+              lastName: dto.lastName,
+              username: dto.username,
+              phoneNo: dto.phoneNo,
+              location: dto.location,
+              gender: gender,
+              verificationId: verificationId,
+              code: code
+            },
+          });
+
+          return {
+            temp: {
+              phoneNo: registeredUser.phoneNo,
+              firstName: registeredUser.firstName,
+              username: registeredUser.username,
+              lastName: registeredUser.lastName,
+              location: registeredUser.location,
+              gender: registeredUser.gender,
+            },
+            message: 'Temp account created verify your account with otp you recieved',
+          }
+        } else {
+          return result;
         }
-      }
-    else {
-      throw new InternalServerErrorException()
+    } catch(error){
+        throw error.response?.data || error.message;
+
     }
+    
 
   }
 
@@ -208,7 +222,7 @@ export class AuthService {
   }
 
 
-    async loginVerifyOtp(dto: {phoneNo: string, otp: string}) {
+    async loginVerifyOtp(dto: LoginVerifyDto) {
 
       if (!dto.phoneNo) {
         throw new BadRequestException('Enter phone number to login');
@@ -244,6 +258,7 @@ export class AuthService {
                           id: user!.id,
                       },
                       data: {
+                          location: dto.location,
                           lastLogin: new Date(),
                       },
                     });
@@ -255,6 +270,8 @@ export class AuthService {
 
                     return { accessToken };
                 }
+            return (response.data.errors?.[0] || 'Invalid or expired OTP');
+
           } catch (error) {
                 throw error.response?.data || error.message;
           }
