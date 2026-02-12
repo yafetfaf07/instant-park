@@ -152,6 +152,7 @@ export class WardenService {
               id: warden!.id,
             },
             data: {
+              currentLocation: dto.location,
               lastLogin: new Date(),
             },
           });
@@ -163,6 +164,7 @@ export class WardenService {
           const accessToken = this.jwtService.sign(payload);
           return { accessToken };
         }
+        return (response.data.errors?.[0] || 'Invalid or expired OTP');
       }
       catch(error){
           throw error.response?.data || error.message;
@@ -170,7 +172,7 @@ export class WardenService {
       }
         
 
-
+      
   }
 
   async loginSendOtp(dto: LoginDto){
