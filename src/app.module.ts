@@ -12,11 +12,14 @@ import { PaymentModule } from './payment/payment.module';
 import { CheckInModule } from './check-in/check-in.module';
 import { WardenModule } from './warden/warden.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
     DatabaseModule, 
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     AuthModule,
     ParkingAvenueModule, 
     AdminModule, 
@@ -28,6 +31,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     VehicleModule,
     CheckInModule,
     WardenModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -38,7 +38,7 @@ enum Gender {
 model ParkingAvenue {
   id                  String             @id @default(uuid())
   name                String             @unique
-  address             String             @unique
+  address             String
   latitude            Float
   longitude           Float
   ownerId             String
@@ -58,7 +58,7 @@ model ParkingAvenue {
   checkIns            CheckIn[]
   warden              Warden[] 
   parkingAvenueImage ParkingAvenueImage[]
-
+  occupancyLogs OccupancyLog[]
 }
 
 enum PARKINGSTATUS {
@@ -194,4 +194,22 @@ model ParkingAvenueImage {
   parkingAvenueId     String             
   parkingAvenue       ParkingAvenue      @relation(fields: [parkingAvenueId], references: [id])
   photosUrl	          String
+}
+
+model OccupancyLog {
+  id              String        @id @default(uuid())
+  timestamp       DateTime      @default(now())
+  
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id], onDelete: Cascade)
+  
+  hour      Int
+  dayOfWeek Int
+  isWeekend Int
+
+  totalSpots      Int
+  currentSpots    Int
+  occupancyRate   Float
+
+  @@index([parkingAvenueId, timestamp])
 }

@@ -9,7 +9,7 @@ import { SearchParkingDto } from './dto/search-parking-avenue.dto';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { GetReservationsDto } from './dto/get-reservations.dto';
 import { GetCheckInsDto } from './dto/get-check-ins.dto';
-import { GetMyParkingAvenueDetailDto } from './dto/get-parking-avenue-detail.dto';
+import { GetMyParkingAvenueDetailDto } from './dto/get-my-parking-avenue-detail.dto';
 import { GetNameParkingAvenueDto } from './dto/get-name-parking-avenue.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { extname } from 'path';
@@ -115,6 +115,12 @@ export class ParkingAvenueController {
   @ApiResponse({ status: 200, description: 'List of nearby parking avenues sorted by distance' })
   search(@Query() searchDto: SearchParkingDto) {
     return this.parkingAvenueService.findNearby(searchDto);
+  }
+
+  @ApiOperation({ summary: 'Get parking avenue detail' })
+  @Get(':id')
+  getParkingAvenueDetail(@Param('id') parkingAvenueId: string, @Query('eta') eta: number) {
+    return this.parkingAvenueService.getParkingAvenueDetail(parkingAvenueId, eta);
   }
 
   @ApiOperation({ summary: 'Get parking avenue by name' })

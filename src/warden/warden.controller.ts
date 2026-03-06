@@ -8,7 +8,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nes
 import { UpdateParkingAvenueOwnerDto } from 'src/parking-avenue-owner/dto/update-parking-avenue-owner.dto';
 import { LoginDto } from 'src/auth/dto/login.dto';
 import { LoginVerifyDto } from 'src/auth/dto/loginVerify.dto';
-import { GetMyParkingAvenueDetailDto } from 'src/parking-avenue/dto/get-parking-avenue-detail.dto';
+import { GetMyParkingAvenueDetailDto } from 'src/parking-avenue/dto/get-my-parking-avenue-detail.dto';
 import { GetUsernameWardenDto } from './dto/get-username-warden.dto';
 import { GetPhoneNoWardenDto } from './dto/get-phoneno-warden.dto';
 

@@ -12,7 +12,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LiveActivityEvent } from 'src/admin/event/live-activity.event';
 import { GetNameParkingAvenueDto } from './dto/get-name-parking-avenue.dto';
 import { CreateParkingAvenueImageDto } from './dto/create-parking-avenue-image.dto';
-import { GetMyParkingAvenueDetailDto } from './dto/get-parking-avenue-detail.dto';
+import { GetMyParkingAvenueDetailDto } from './dto/get-my-parking-avenue-detail.dto';
+import axios from 'axios';
 
 @Injectable()
 export class ParkingAvenueService {
@@ -21,6 +22,8 @@ export class ParkingAvenueService {
     private readonly databaseService: DatabaseService,
     private readonly eventEmitter: EventEmitter2,
   ) { }
+
+  private readonly AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
   async create(createParkingAvenueDto: CreateParkingAvenueDto, userId: string) {
     const parkingAvenueOwnerCheck =
@@ -84,6 +87,47 @@ export class ParkingAvenueService {
       `;
 
     return results;
+  }
+
+  async getParkingAvenueDetail(parkingAvenueId: string, eta: number){
+    
+    const parkingAvenue = await this.databaseService.parkingAvenue.findFirst(
+      {
+        where: {
+          id: parkingAvenueId
+        },
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          workingHrs: true,
+          hourlyRate: true,
+          totalSpots: true,
+          status: true,
+          currentSpots: true,
+        }
+      }
+    );
+
+    if(!parkingAvenue){
+      throw new NotFoundException("You do not have any parking avenues");
+    }
+
+    let prediction = null;
+
+    try {
+      // Ask the AI Microservice for a prediction
+      const aiResponse = await axios.post(`${this.AI_SERVICE_URL}/predict`, {
+        parking_avenue_id: parkingAvenue.id,
+        eta_minutes: eta,
+      });
+      
+      prediction = aiResponse.data;
+    } catch (error) {
+      this.logger.warn(`AI prediction unavailable for lot ${parkingAvenue.id}`);
+    }
+
+    return prediction;
   }
 
   async createReservation(dto: CreateReservationDto, userId: string) {

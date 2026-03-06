@@ -1,13 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsString, Min,} from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import type { ParkingAvenue } from "@prisma/client";
+import { IsNotEmpty } from "class-validator";
 
-
-export class GetMyParkingAvenueDetailDto {
+export class GetParkingAvenueDetailDto {
   @ApiProperty({
-    description: 'parking avenue id',
-    example: 'e7ceda3a-8a20-433e-b111-8a5a0bbfa2c2',
+    description: 'parking avenue object',
   })
   @IsNotEmpty()
-  @IsString()
-  id: string;
+  parkingAvenue: ParkingAvenue;
+
+  
 }
