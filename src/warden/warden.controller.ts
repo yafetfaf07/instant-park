@@ -3,7 +3,7 @@ import { WardenService } from './warden.service';
 import { CreateWardenDto } from './dto/create-warden.dto';
 import { UpdateWardenDto } from './dto/update-warden.dto';
 import type { RequestWithUser } from '../auth/express-request-with-user.interface';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { UpdateParkingAvenueOwnerDto } from 'src/parking-avenue-owner/dto/update-parking-avenue-owner.dto';
 import { LoginDto } from 'src/auth/dto/login.dto';

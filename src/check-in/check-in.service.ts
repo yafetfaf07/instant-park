@@ -1,8 +1,8 @@
 import { Injectable, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateCheckInDto } from './dto/create-check-in.dto';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from '../database/database.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LiveActivityEvent } from 'src/admin/event/live-activity.event';
+import { LiveActivityEvent } from '../admin/event/live-activity.event';
 
 @Injectable()
 export class CheckInService {

@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, UseGuards, Req, Patch, Sse, Query } from '
 import { AdminService } from './admin.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import type { RequestWithUser } from 'src/auth/express-request-with-user.interface';
 import { Observable, fromEvent } from 'rxjs';
