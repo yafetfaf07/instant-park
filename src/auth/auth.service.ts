@@ -258,7 +258,6 @@ export class AuthService {
                           id: user!.id,
                       },
                       data: {
-                          location: dto.location,
                           lastLogin: new Date(),
                       },
                     });
