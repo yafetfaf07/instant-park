@@ -16,12 +16,4 @@ export class LoginVerifyDto {
   @IsString()
   otp: string;
 
-  @ApiProperty({
-    description: 'location at the given time of login ',
-    example: 'GPS Coordinates',
-  })
-  @IsNotEmpty()
-  @IsString()
-  location: string;
-
 }

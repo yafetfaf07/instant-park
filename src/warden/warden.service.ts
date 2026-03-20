@@ -152,7 +152,6 @@ export class WardenService {
               id: warden!.id,
             },
             data: {
-              currentLocation: dto.location,
               lastLogin: new Date(),
             },
           });
