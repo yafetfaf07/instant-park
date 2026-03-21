@@ -4,15 +4,26 @@ import { UpdateAdminDto } from './dto/update-admin.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../database/database.service';
-import { ParkingAvenueType } from '@prisma/client';
+import { Admin, ParkingAvenueType } from '@prisma/client';
 import { GetByApprovalStatus } from './dto/get-by-approval-status.dto';
 import { UpdateApprovalStatus } from './dto/update-approval-status.dto';
 import { UpdateVerificationDto } from './dto/update-verification-dto';
+const PAGE_SIZE = 10;
 
 @Injectable()
 export class AdminService {
   
     constructor( private readonly db: DatabaseService, private readonly jwtService: JwtService,) {}
+
+    paginate(items: any[]) {
+      const hasMore = items.length > PAGE_SIZE;
+      const data = hasMore ? items.slice(0, PAGE_SIZE) : items;
+      const nextCursor = hasMore
+        ? data[data.length - 1].id
+        : null;
+
+        return { data, hasMore, nextCursor };
+    }
 
     async register(createAdminDto: CreateAdminDto) {
       if (!createAdminDto.password.length || createAdminDto.password.length < 8) {
@@ -99,7 +110,10 @@ export class AdminService {
       const unverifiedOwnersList = await this.db.parkingAvenueOwner.findMany({
         where: {
           isVerified: getByApprovalStatus.approvalStatus
-        }
+        },          
+        omit: {
+            password: true,
+          },
       });
 
       return unverifiedOwnersList;
@@ -125,6 +139,9 @@ export class AdminService {
         },
         data: {
           isVerified: updateVerificationDto.approvalStatus
+        },
+        omit: {
+          password: true
         }
       });
 
@@ -176,7 +193,7 @@ export class AdminService {
   }
 
 
-  async getByApprovalStatus(getByApprovalStatus: GetByApprovalStatus, adminId: string){
+  async getByApprovalStatus(getByApprovalStatus: GetByApprovalStatus, adminId: string, cursor?: string){
 
     const checkAdminId = await this.db.admin.findUnique(
       {
@@ -193,12 +210,17 @@ export class AdminService {
     const parkingAvenuesByStatus = await this.db.parkingAvenue.findMany(
       {
         where: {
-          approvalStatus: getByApprovalStatus.approvalStatus
-        }
+          approvalStatus: getByApprovalStatus.approvalStatus,
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        orderBy: {
+            id: 'asc',
+          },
+          take: PAGE_SIZE + 1
       }
     );
 
-    return parkingAvenuesByStatus;
+    return this.paginate(parkingAvenuesByStatus);
 
   }
 
@@ -319,5 +341,75 @@ export class AdminService {
       };
     });
   }
+
+  async getWithoutApprovalStatus(adminId: string, cursor?: string){
+
+      const checkAdminId = await this.db.admin.findUnique(
+        {
+          where: {
+            id: adminId
+          }
+        }
+      );
+
+      if(!checkAdminId){
+        throw new NotFoundException("Only admin is allowed to view approval status")
+      }
+
+      const parkingAvenues = await this.db.parkingAvenue.findMany(
+        {
+          where: {
+            ...(cursor ? { id: { gt: cursor } } : {}),
+          },
+          orderBy: {
+            id: 'asc',
+          },
+          take: PAGE_SIZE + 1
+        }
+      );
+
+      return this.paginate(parkingAvenues);
+
+  }
+  
+
+  async parkingAvenueOwnerWithoutApprovalStatus(adminId: string, cursor?: string) {
+      const isAdmin = await this.db.admin.findUnique({ where: { id: adminId } });
+
+      if (!isAdmin) {
+        throw new UnauthorizedException("Only admin is allowed to view approval status");
+      }
+
+      const unverifiedOwnersList = await this.db.parkingAvenueOwner.findMany({
+        where: {
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        orderBy: { id: 'asc' },
+        omit: { password: true },
+        take: PAGE_SIZE + 1,
+        include: {
+          parkingAvenues: {
+            select: {
+              totalSpots: true,
+            },
+          },
+        },
+      });
+
+      const ownersWithStats = unverifiedOwnersList.map((owner) => {
+        const totalLocations = owner.parkingAvenues.length;
+        const totalSpaces = owner.parkingAvenues.reduce((acc, curr) => acc + curr.totalSpots, 0);
+
+        const { parkingAvenues, ...ownerData } = owner;
+
+        return {
+          ...ownerData,
+          totalLocations,
+          totalSpaces,
+        };
+      });
+
+  return this.paginate(ownersWithStats);
+}
 
 }
