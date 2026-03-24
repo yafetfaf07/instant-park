@@ -58,7 +58,15 @@ describe('CheckInController', () => {
 
   describe('checkOut', () => {
     it('should call checkInService.checkOut', async () => {
-      const mockCheckoutResponse = { message: 'Check-out successful', availableSpots: 10 };
+      const mockCheckoutResponse = {
+        message: 'Check-out successful',
+        licensePlate: 'ABC-123',
+        availableSpots: 10,
+        totalPrice: 100,
+        hoursStayed: 2,
+        hourlyRate: 50,
+        checkoutUrl: 'http://checkout.com'
+      };
       mockCheckInService.checkOut.mockResolvedValue(mockCheckoutResponse);
 
       const result = await controller.checkOut('ABC-123');

@@ -2,13 +2,15 @@ import { Injectable, ConflictException, BadRequestException, NotFoundException }
 import { CreateCheckInDto } from './dto/create-check-in.dto';
 import { DatabaseService } from '../database/database.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LiveActivityEvent } from 'src/event/live-activity.event';
+import { LiveActivityEvent } from '../event/live-activity.event';
+import { PaymentService } from '../payment/payment.service';
 
 @Injectable()
 export class CheckInService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly eventEmitter: EventEmitter2,
+        private readonly paymentService: PaymentService,
     ) { }
 
     async create(dto: CreateCheckInDto) {
@@ -24,8 +26,8 @@ export class CheckInService {
             const avenue = await tx.parkingAvenue.findUnique({
                 where: { id: dto.parkingAvenueId },
                 select: {
-                    name: true, 
-                    currentSpots: true ,
+                    name: true,
+                    currentSpots: true,
                 },
             });
 
@@ -101,11 +103,27 @@ export class CheckInService {
     async checkOut(licensePlate: string) {
         const checkIn = await this.databaseService.checkIn.findUnique({
             where: { licensePlate },
+            include: {
+                parkingAvenue: {
+                    select: {
+                        hourlyRate: true,
+                    }
+                }
+            }
         });
 
         if (!checkIn) {
             throw new NotFoundException(`No active check-in found for plate: ${licensePlate}`);
         }
+
+        const now = new Date();
+        const entryTime = new Date(checkIn.createdAt);
+        const diffInMs = now.getTime() - entryTime.getTime();
+        const hoursStayed = Math.max(1, Math.ceil(diffInMs / (1000 * 60 * 60)));
+        const totalPrice = hoursStayed * checkIn.parkingAvenue.hourlyRate;
+        const tx_ref = `walkin-${licensePlate}-${Date.now()}`;
+
+        const paymentInit = await this.paymentService.initializeWalkInPayment(totalPrice, licensePlate, tx_ref);
 
         return this.databaseService.$transaction(async (tx) => {
             await tx.checkIn.delete({
@@ -123,6 +141,10 @@ export class CheckInService {
                 message: 'Check-out successful',
                 licensePlate,
                 availableSpots: updatedAvenue.currentSpots,
+                totalPrice,
+                hoursStayed,
+                hourlyRate: checkIn.parkingAvenue.hourlyRate,
+                checkoutUrl: paymentInit.checkout_url,
             };
         });
     }

@@ -67,6 +67,40 @@ export class PaymentService {
         }
     }
 
+    async initializeWalkInPayment(amount: number, licensePlate: string, tx_ref: string) {
+        const payload = {
+            amount: amount.toString(),
+            currency: 'ETB',
+            first_name: 'WalkIn',
+            last_name: 'Customer',
+            phone_number: "0900123456",
+            tx_ref: tx_ref,
+            callback_url: env.CALLBACK_URL,
+            customization: {
+                title: 'Parking Fee',
+                description: `Walk-in payment for vehicle ${licensePlate}`,
+            },
+        };
+
+        try {
+            const response = await axios.post(
+                'https://api.chapa.co/v1/transaction/initialize',
+                payload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${env.CHAPA_SECRET_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                },
+            );
+
+            return { checkout_url: response.data.data.checkout_url };
+        } catch (error) {
+            this.logger.error('Chapa Walkin Initialization Error', error.response?.data);
+            throw new BadRequestException('Walk-in payment initialization failed');
+        }
+    }
+
     async confirmPayment(dto: ConfirmPaymentDto) {
         const { reservationId, transactionReference } = dto;
 
@@ -144,11 +178,11 @@ export class PaymentService {
             // throw new BadRequestException('Invalid signature'); 
         }
 
-        
+
         if (payload.status !== 'success') {
             return { message: 'Ignored: Payment not successful' };
         }
-        
+
         const tx_ref = payload.tx_ref;
         if (!tx_ref) {
             this.logger.warn('Webhook received without tx_ref');

@@ -3,11 +3,13 @@ import { CheckInService } from './check-in.service';
 import { DatabaseService } from '../database/database.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { PaymentService } from '../payment/payment.service';
 
 describe('CheckInService', () => {
   let service: CheckInService;
   let db: any;
   let eventEmitter: EventEmitter2;
+  let paymentService: any;
 
   // Mock the Database Service
   const mockDb = {
@@ -30,18 +32,24 @@ describe('CheckInService', () => {
     emit: jest.fn(),
   };
 
+  const mockPaymentService = {
+    initializeWalkInPayment: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CheckInService,
         { provide: DatabaseService, useValue: mockDb },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: PaymentService, useValue: mockPaymentService },
       ],
     }).compile();
 
     service = module.get<CheckInService>(CheckInService);
     db = module.get(DatabaseService);
     eventEmitter = module.get<EventEmitter2>(EventEmitter2);
+    paymentService = module.get<PaymentService>(PaymentService);
   });
 
   afterEach(() => {
@@ -143,15 +151,31 @@ describe('CheckInService', () => {
   });
 
   describe('checkOut', () => {
+    beforeAll(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2024-01-01T12:00:00Z'));
+    });
+
+    afterAll(() => {
+      jest.useRealTimers();
+    });
+
     it('should throw NotFoundException if no active check-in', async () => {
       db.checkIn.findUnique.mockResolvedValue(null);
       await expect(service.checkOut('XYZ-999')).rejects.toThrow(NotFoundException);
     });
 
-    it('should delete check-in and increment spots successfully', async () => {
-      db.checkIn.findUnique.mockResolvedValue({ id: 'checkin-1', parkingAvenueId: 'avenue-1' });
+    it('should delete check-in, increment spots, and return price with checkoutUrl', async () => {
+      const mockCheckIn = {
+        id: 'checkin-1',
+        parkingAvenueId: 'avenue-1',
+        createdAt: new Date('2024-01-01T10:00:00Z'), // 2 hours ago
+        parkingAvenue: { hourlyRate: 50 },
+      };
+
+      db.checkIn.findUnique.mockResolvedValue(mockCheckIn);
       db.checkIn.delete.mockResolvedValue(true);
       db.parkingAvenue.update.mockResolvedValue({ currentSpots: 10 });
+      mockPaymentService.initializeWalkInPayment.mockResolvedValue({ checkout_url: 'http://checkout.chapa.co' });
 
       const result = await service.checkOut('ABC-123');
 
@@ -160,10 +184,20 @@ describe('CheckInService', () => {
         where: { id: 'avenue-1' },
         data: { currentSpots: { increment: 1 } },
       });
+      expect(mockPaymentService.initializeWalkInPayment).toHaveBeenCalledWith(
+        100, // 2 hours * 50
+        'ABC-123',
+        expect.stringMatching(/^walkin-ABC-123-/)
+      );
+
       expect(result).toEqual({
         message: 'Check-out successful',
         licensePlate: 'ABC-123',
         availableSpots: 10,
+        totalPrice: 100,
+        hoursStayed: 2,
+        hourlyRate: 50,
+        checkoutUrl: 'http://checkout.chapa.co',
       });
     });
   });
