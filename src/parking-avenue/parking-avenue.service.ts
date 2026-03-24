@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GetReservationsDto } from './dto/get-reservations.dto';
 import { GetCheckInsDto } from './dto/get-check-ins.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LiveActivityEvent } from 'src/admin/event/live-activity.event';
+import { LiveActivityEvent } from 'src/event/live-activity.event';
 import { GetNameParkingAvenueDto } from './dto/get-name-parking-avenue.dto';
 import { CreateParkingAvenueImageDto } from './dto/create-parking-avenue-image.dto';
 import { GetMyParkingAvenueDetailDto } from './dto/get-my-parking-avenue-detail.dto';
@@ -212,6 +212,7 @@ export class ParkingAvenueService {
       this.eventEmitter.emit( // emitting the event
         'live.activity', // event name
         new LiveActivityEvent(
+          parkingAvenueId,
           'RESERVATION',
           `New reservation at ${parkingSpot.name}`,
           new Date(),

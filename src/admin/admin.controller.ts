@@ -8,7 +8,7 @@ import type { RequestWithUser } from 'src/auth/express-request-with-user.interfa
 import { Observable, fromEvent } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LiveActivityEvent } from './event/live-activity.event';
+import { LiveActivityEvent } from '../event/live-activity.event';
 import { UpdateVerificationDto } from './dto/update-verification-dto';
 import { GetByApprovalStatus } from './dto/get-by-approval-status.dto';
 import { UpdateApprovalStatus } from './dto/update-approval-status.dto';

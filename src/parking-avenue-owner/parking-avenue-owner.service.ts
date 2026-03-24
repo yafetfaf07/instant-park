@@ -1,14 +1,18 @@
-import { Injectable, BadRequestException, ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { CreateParkingAvenueOwnerDto } from './dto/create-parking-avenue-owner.dto';
 import { UpdateParkingAvenueOwnerDto } from './dto/update-parking-avenue-owner.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../database/database.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Observable, fromEvent } from 'rxjs';
+import { filter, map } from 'rxjs/operators';
+import { LiveActivityEvent } from '../event/live-activity.event';
 
 @Injectable()
 export class ParkingAvenueOwnerService {
- 
-  constructor( private readonly db: DatabaseService, private readonly jwtService: JwtService,) {}
+  private readonly logger = new Logger(ParkingAvenueOwnerService.name); 
+  constructor( private readonly db: DatabaseService, private readonly jwtService: JwtService,private readonly eventEmitter: EventEmitter2,) {}
   
       async register(createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto) {
 
@@ -121,5 +125,24 @@ export class ParkingAvenueOwnerService {
     }
     return parkingAvenueOwner;
   }
-  
+async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> {
+    const avenues = await this.db.parkingAvenue.findMany({
+      where: { ownerId },
+      select: { id: true },
+    });
+
+    const ownedAvenueIds = new Set(avenues.map((avenue) => avenue.id));
+
+    this.logger.log(`Owner ${ownerId} connected to SSE. Listening for ${ownedAvenueIds.size} avenues.`);
+
+    return fromEvent(this.eventEmitter, 'live.activity').pipe(
+      filter((event: LiveActivityEvent) => ownedAvenueIds.has(event.parkingAvenueId)),
+      
+      map((event: LiveActivityEvent) => {
+        return {
+          data: event,
+        } as MessageEvent;
+      }),
+    );
+  }  
 }

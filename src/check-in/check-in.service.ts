@@ -2,7 +2,7 @@ import { Injectable, ConflictException, BadRequestException, NotFoundException }
 import { CreateCheckInDto } from './dto/create-check-in.dto';
 import { DatabaseService } from '../database/database.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LiveActivityEvent } from '../admin/event/live-activity.event';
+import { LiveActivityEvent } from 'src/event/live-activity.event';
 
 @Injectable()
 export class CheckInService {
@@ -47,6 +47,7 @@ export class CheckInService {
             this.eventEmitter.emit(
                 'live.activity',
                 new LiveActivityEvent(
+                    dto.parkingAvenueId,
                     'WALK_IN',
                     `Vehicle ${dto.licensePlate} entered ${avenue.name}`,
                     new Date(),

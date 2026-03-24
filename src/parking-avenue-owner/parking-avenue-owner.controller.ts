@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException, Sse, Query } from '@nestjs/common';
 import { ParkingAvenueOwnerService } from './parking-avenue-owner.service';
 import { CreateParkingAvenueOwnerDto } from './dto/create-parking-avenue-owner.dto';
 import { UpdateParkingAvenueOwnerDto } from './dto/update-parking-avenue-owner.dto';
@@ -10,6 +10,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { extname } from 'path';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
+import { Observable } from 'rxjs';
 
 const diskStorageConfig = diskStorage({
   destination: 'uploads',
@@ -93,5 +94,8 @@ export class ParkingAvenueOwnerController {
     return this.parkingAvenueOwnerService.getProfile(id);
   }
 
-
+@Sse('live-activity')
+  async streamLiveActivities(@Query('ownerId') ownerId: string): Promise<Observable<MessageEvent>> {
+    return this.parkingAvenueOwnerService.getLiveActivityStream(ownerId);
+  }
   }
