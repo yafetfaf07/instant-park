@@ -152,8 +152,8 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
     );
   }
   
-  async forgotPassword(parkingAvenueOwnerId: string) {
-    const user = await this.db.parkingAvenueOwner.findUnique({ where: { id : parkingAvenueOwnerId } });
+  async forgotPassword(email: string) {
+    const user = await this.db.parkingAvenueOwner.findUnique({ where: { email } });
     if (!user) throw new NotFoundException('User not found');
 
     const token = Math.floor(100000 + Math.random() * 900000).toString();
@@ -165,7 +165,7 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
     });
     
     try {
-      await this.emailService.sendForgotPasswordEmail(user.email, user.firstName, token);
+      await this.emailService.sendForgotPasswordEmail(email, user.firstName, token);
       return "Sent email successfully."
     }
     catch(error){
@@ -174,8 +174,8 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
 
   }
 
-  async resetPassword(parkingAvenueOwnerId: string, token: string, newPassword: string) {
-    const user = await this.db.parkingAvenueOwner.findUnique({ where: { id : parkingAvenueOwnerId } });
+  async resetPassword(email: string, token: string, newPassword: string) {
+    const user = await this.db.parkingAvenueOwner.findUnique({ where: { email } });
     
     if (!user || user.resetToken !== token || new Date() > user.resetTokenExpiry!) {
       throw new BadRequestException('Invalid or expired token');
