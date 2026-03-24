@@ -12,6 +12,7 @@ import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import { Observable } from 'rxjs';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 const diskStorageConfig = diskStorage({
   destination: 'uploads',
@@ -101,20 +102,16 @@ export class ParkingAvenueOwnerController {
   }
 
   
-  @UseGuards(JwtAuthGuard)
-  @Get('forgot-password')
-  @ApiBearerAuth('JWT-auth')
-  forgotPassword(@Req() req: RequestWithUser){
-    return this.parkingAvenueOwnerService.forgotPassword(req.user.id)
+  @Post('forgot-password')
+  @ApiBody({ type: ForgotPasswordDto })
+  forgotPassword(@Body() forgotPasswordDto : ForgotPasswordDto){
+    return this.parkingAvenueOwnerService.forgotPassword(forgotPasswordDto.email)
   }
 
-  ResetPasswordDto
-  @UseGuards(JwtAuthGuard)
   @Post('reset-password')
-  @ApiBearerAuth('JWT-auth')
   @ApiBody({ type: ResetPasswordDto })
-    resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Req() req: RequestWithUser){
-    return this.parkingAvenueOwnerService.resetPassword(req.user.id, resetPasswordDto.token, resetPasswordDto.newPassword)
+    resetPassword(@Body() resetPasswordDto: ResetPasswordDto){
+    return this.parkingAvenueOwnerService.resetPassword(resetPasswordDto.email, resetPasswordDto.token, resetPasswordDto.newPassword)
   }
 
 
