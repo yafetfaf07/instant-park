@@ -15,6 +15,8 @@ import { CreateParkingAvenueImageDto } from './dto/create-parking-avenue-image.d
 import { GetMyParkingAvenueDetailDto } from './dto/get-my-parking-avenue-detail.dto';
 import axios from 'axios';
 import { GetParkingAvenueDetailDto } from './dto/get-parking-avenue-detail.dto';
+import { CheckInService } from '../check-in/check-in.service';
+import { CreateCheckInDto } from 'src/check-in/dto/create-check-in.dto';
 const PAGE_SIZE = 10;
 
 @Injectable()
@@ -23,6 +25,7 @@ export class ParkingAvenueService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly checkInService: CheckInService
   ) { }
 
   paginate(items: any[]) {
@@ -81,7 +84,7 @@ export class ParkingAvenueService {
 
     // 6371 is the radius of the Earth in km
     const results = await this.databaseService.$queryRaw<ParkingAvenue[]>`
-        SELECT id, name, address, latitude, longitude, status, "hourlyRate", "photoUrl",
+        SELECT id, name, address, latitude, longitude, status, "hourlyRate",
         (
           6371 * acos(
             cos(radians(${latitude})) * cos(radians(latitude)) * cos(radians(longitude) - radians(${longitude})) +
@@ -242,7 +245,7 @@ export class ParkingAvenueService {
     }
   }
 
-  async getReservations(parkingAvenueId: string, query: GetReservationsDto) {
+  async getReservationsByAvenue(parkingAvenueId: string, query: GetReservationsDto) {
     const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
@@ -285,22 +288,88 @@ export class ParkingAvenueService {
     };
   }
 
-  async verifyPayment(bookingRef: string) {
-    const reservation = await this.databaseService.reservation.findUnique({
-      where: { bookingRef: bookingRef },
-    });
+  async getReservationsByUser(userId: string, query: GetReservationsDto) {
+    const { page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
 
-    if (!reservation) {
-      this.logger.error(`Reservation with ref ${bookingRef} not found`);
-      throw new NotFoundException('Reservation not found');
+    const user = await this.databaseService.customer.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException(`User #${userId} not found`);
     }
 
-    if (reservation.status === 'CONFIRMED') {
-      return { message: 'reservation is confirmed' };
-    } else {
-      return { message: 'reservation not confirmed yet' };
+    const [data, total] = await Promise.all([
+      this.databaseService.reservation.findMany({
+        where: { userId: userId },
+        skip: skip,
+        take: limit,
+        select: {
+          bookingRef: true,
+          startTime: true,
+          endTime: true,
+          totalPrice: true,
+          status: true,
+          user: { select: { firstName: true, lastName: true } }
+        },
+        orderBy: { startTime: 'desc' },
+      }),
+      this.databaseService.reservation.count({
+        where: { parkingAvenueId: userId },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
+    };
+  }
+
+async verifyPayment(bookingRef: string) {
+  const reservation = await this.databaseService.reservation.findUnique({
+    where: { bookingRef: bookingRef },
+  });
+
+  if (!reservation) {
+    this.logger.error(`Reservation with ref ${bookingRef} not found`);
+    throw new NotFoundException('Reservation not found');
+  }
+
+  // Prevent Double Check-ins
+  if (reservation.status === 'FULFILLED') {
+    throw new ConflictException('This reservation has already been used for check-in.');
+  }
+
+  if (reservation.status === 'CONFIRMED') {
+    let dto = new CreateCheckInDto();
+    dto.licensePlate = reservation.plateNumber;
+    dto.parkingAvenueId = reservation.parkingAvenueId;
+    dto.userId = reservation.userId;
+    
+    try {
+      await this.checkInService.create(dto);
+
+      await this.databaseService.reservation.update({
+        where: { id: reservation.id },
+        data: { status: 'FULFILLED' }
+      });
+
+      return { message: 'Reservation confirmed and vehicle checked in successfully.' };
+
+    } catch (error) {
+      this.logger.error(`Failed to auto check-in reservation ${bookingRef}`, error.stack);
+      throw new InternalServerErrorException('Reservation is confirmed, but automatic check-in failed. Please check-in manually.');
     }
   }
+
+  return { message: 'Reservation not confirmed yet.' };
+}
 
   async getAvenueCheckIns(parkingAvenueId: string, dto: GetCheckInsDto) {
     const { page = 1, limit = 10 } = dto;

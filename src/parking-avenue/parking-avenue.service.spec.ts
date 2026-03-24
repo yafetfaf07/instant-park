@@ -135,7 +135,7 @@ describe('ParkingAvenueService', () => {
       db.reservation.findMany.mockResolvedValue([{ bookingRef: '123' }]);
       db.reservation.count.mockResolvedValue(1);
 
-      const result = await service.getReservations('ave-1', { page: 1, limit: 10 });
+      const result = await service.getReservationsByAvenue('ave-1', { page: 1, limit: 10 });
       expect(result.data).toEqual([{ bookingRef: '123' }]);
       expect(result.meta.total).toBe(1);
     });

@@ -137,7 +137,7 @@ describe('ParkingAvenueController', () => {
 
     it('getReservations should call service', async () => {
       mockService.getReservations.mockResolvedValue({ data: [] });
-      expect(await controller.getReservations('ave-1', {} as any, mockReq)).toEqual({ data: [] });
+      expect(await controller.getReservationsByAvenue('ave-1', {} as any, mockReq)).toEqual({ data: [] });
     });
 
     it('verify should call verifyPayment', async () => {

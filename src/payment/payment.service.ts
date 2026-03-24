@@ -38,7 +38,8 @@ export class PaymentService {
             currency: 'ETB',
             first_name: user?.firstName,
             last_name: user.lastName,
-            phone_number: user.phoneNo,
+            // phone_number: user.phoneNo,
+            phone_number: "0900123456",
             tx_ref: tx_ref,
             callback_url: env.CALLBACK_URL,
             customization: {

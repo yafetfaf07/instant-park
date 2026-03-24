@@ -108,7 +108,7 @@ model Reservation {
   endTime              DateTime
   durationHours        Int
   totalPrice           Float
-  status               String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  status               String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED, FULLFILLED
   qrCode               String?
   transactionReference String?  @unique
   plateNumber          String   @unique
