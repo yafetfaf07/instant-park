@@ -8,11 +8,17 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, fromEvent } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { LiveActivityEvent } from '../event/live-activity.event';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class ParkingAvenueOwnerService {
   private readonly logger = new Logger(ParkingAvenueOwnerService.name); 
-  constructor( private readonly db: DatabaseService, private readonly jwtService: JwtService,private readonly eventEmitter: EventEmitter2,) {}
+  constructor( 
+    private readonly db: DatabaseService, 
+    private readonly jwtService: JwtService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly  emailService: EmailService,
+  ) {}
   
       async register(createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto) {
 
@@ -144,5 +150,48 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
         } as MessageEvent;
       }),
     );
-  }  
+  }
+  
+  async forgotPassword(parkingAvenueOwnerId: string) {
+    const user = await this.db.parkingAvenueOwner.findUnique({ where: { id : parkingAvenueOwnerId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 15 * 60000);
+
+    await this.db.parkingAvenueOwner.update({
+      where: { id: user.id },
+      data: { resetToken: token, resetTokenExpiry: expiry },
+    });
+    
+    try {
+      await this.emailService.sendForgotPasswordEmail(user.email, user.firstName, token);
+      return "Sent email successfully."
+    }
+    catch(error){
+        console.error("Failed to send email", error);
+    }
+
+  }
+
+  async resetPassword(parkingAvenueOwnerId: string, token: string, newPassword: string) {
+    const user = await this.db.parkingAvenueOwner.findUnique({ where: { id : parkingAvenueOwnerId } });
+    
+    if (!user || user.resetToken !== token || new Date() > user.resetTokenExpiry!) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    await this.db.parkingAvenueOwner.update({
+      where: { id: user.id },
+      data: { 
+        password: hashedPassword, 
+        resetToken: null, 
+        resetTokenExpiry: null 
+      },
+    });
+
+    return { message: 'Password updated successfully' };
+  }
 }

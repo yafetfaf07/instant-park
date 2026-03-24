@@ -98,7 +98,8 @@ model ParkingAvenueOwner {
   parkingAvenues    ParkingAvenue[]
   personalId        String
   rejectionReason   String?         
-
+  resetToken        String?
+  resetTokenExpiry  DateTime?
 }
 
 model Reservation {

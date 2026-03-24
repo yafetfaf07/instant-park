@@ -11,6 +11,7 @@ import { extname } from 'path';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import { Observable } from 'rxjs';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 const diskStorageConfig = diskStorage({
   destination: 'uploads',
@@ -94,8 +95,29 @@ export class ParkingAvenueOwnerController {
     return this.parkingAvenueOwnerService.getProfile(id);
   }
 
-@Sse('live-activity')
+  @Sse('live-activity')
   async streamLiveActivities(@Query('ownerId') ownerId: string): Promise<Observable<MessageEvent>> {
     return this.parkingAvenueOwnerService.getLiveActivityStream(ownerId);
   }
+
+  
+  @UseGuards(JwtAuthGuard)
+  @Get('forgot-password')
+  @ApiBearerAuth('JWT-auth')
+  forgotPassword(@Req() req: RequestWithUser){
+    return this.parkingAvenueOwnerService.forgotPassword(req.user.id)
+  }
+
+  ResetPasswordDto
+  @UseGuards(JwtAuthGuard)
+  @Post('reset-password')
+  @ApiBearerAuth('JWT-auth')
+  @ApiBody({ type: ResetPasswordDto })
+    resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Req() req: RequestWithUser){
+    return this.parkingAvenueOwnerService.resetPassword(req.user.id, resetPasswordDto.token, resetPasswordDto.newPassword)
+  }
+
+
+
+  
   }

@@ -5,9 +5,11 @@ import { DatabaseModule } from 'src/database/database.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
+      EmailModule,
       DatabaseModule,
       PassportModule,
       ConfigModule, 
