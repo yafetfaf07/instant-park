@@ -113,6 +113,7 @@ model Reservation {
   qrCode               String?
   transactionReference String?  @unique
   plateNumber          String   @unique
+  reminderSent         Boolean  @default(false)
 
   userId          String
   user            Customer      @relation(fields: [userId], references: [id])

@@ -141,7 +141,7 @@ export class ParkingAvenueController {
   }
 
   //@UseGuards(JwtAuthGuard)
-  @Get('reservations/:id')
+  @Get('reservations/avenue/:id')
   //@ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get paginated reservations for a parking lot' })
   @ApiResponse({ status: 200, description: 'List of reservations with pagination meta' })
@@ -156,7 +156,7 @@ export class ParkingAvenueController {
   }
 
   //@UseGuards(JwtAuthGuard)
-  @Get('reservations/:id')
+  @Get('reservations/user/:id')
   //@ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get paginated reservations for a user' })
   @ApiResponse({ status: 200, description: 'List of reservations with pagination meta' })
@@ -165,13 +165,10 @@ export class ParkingAvenueController {
     @Query() query: GetReservationsDto,
     @Req() req: RequestWithUser
   ) {
-    // TODO: we need to make sure only a warden assigned to the provided parking avenue can access this information
-
     return this.parkingAvenueService.getReservationsByUser(id, query);
   }
   @Get('reservation/verify')
   @ApiOperation({ summary: 'Verify if reservation payment has been made' })
-  @ApiQuery({ name: 'booking ref', required: true, type: String })
   verify(@Query('bookingRef') ref: string) {
     return this.parkingAvenueService.verifyPayment(ref);
   }
