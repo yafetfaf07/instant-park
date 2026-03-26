@@ -9,6 +9,8 @@ import { Observable, fromEvent } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { LiveActivityEvent } from '../event/live-activity.event';
 import { EmailService } from 'src/email/email.service';
+import { GetDashboardOverviewDto } from './dto/get-dashboard-overview.dto';
+import { GetTodayOccupancyChartDto } from './dto/get-today-occupancy-chart.dto';
 const PAGE_SIZE = 10;
 
 @Injectable()
@@ -230,5 +232,101 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
 
     return { data, totalCount, hasMore, nextCursor };
 }
+async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
+    const avenues = await this.db.parkingAvenue.findMany({
+      where: { ownerId: ownerId },
+      select: { id: true },
+    });
 
+    const avenueIds = avenues.map((ave) => ave.id);
+
+    if (avenueIds.length === 0) {
+      return {
+        totalSpots: 0,
+        availableSpotsNow: 0,
+        activeReservationsCount: 0,
+        onDutyWardenCount: 0,
+      };
+    }
+
+    const [parkingAvenueAggregates, activeReservations, onDutyWardens] = await this.db.$transaction([
+      this.db.parkingAvenue.aggregate({
+        where: { ownerId: ownerId },
+        _sum: {
+          totalSpots: true,
+          currentSpots: true,
+        },
+      }),
+
+      this.db.reservation.count({
+        where: {
+          parkingAvenueId: { in: avenueIds },
+          status: 'CONFIRMED',
+        },
+      }),
+
+      this.db.warden.count({
+        where: {
+          parkingAvenueId: { in: avenueIds },
+          wardenStatus: 'ONDUTY',
+        },
+      }),
+    ]);
+
+    return {
+      totalSpots: parkingAvenueAggregates._sum.totalSpots || 0,
+      availableSpotsNow: parkingAvenueAggregates._sum.currentSpots || 0,
+      activeReservationsCount: activeReservations,
+      onDutyWardenCount: onDutyWardens,
+    };
+  }
+
+  async getTodayOccupancyChartData(ownerId: string): Promise<GetTodayOccupancyChartDto> {
+    const avenues = await this.db.parkingAvenue.findMany({
+      where: { ownerId: ownerId },
+      select: { id: true },
+    });
+
+    const avenueIds = avenues.map((ave) => ave.id);
+
+    if (avenueIds.length === 0) {
+      return this.generateEmpty24HourArray();
+    }
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    const occupancyLogsAggregated = await this.db.occupancyLog.groupBy({
+      by: ['hour'],
+      where: {
+        parkingAvenueId: { in: avenueIds },
+        timestamp: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      _avg: {
+        occupancyRate: true,
+      },
+      orderBy: {
+        hour: 'asc',
+      },
+    });
+
+    const fullDayData: GetTodayOccupancyChartDto = this.generateEmpty24HourArray();
+
+    occupancyLogsAggregated.forEach((log) => {
+      fullDayData[log.hour].averageOccupancyRate = log._avg.occupancyRate || 0;
+    });
+
+    return fullDayData;
+  }
+
+  private generateEmpty24HourArray(): GetTodayOccupancyChartDto {
+    return Array.from({ length: 24 }, (_, i) => ({
+      hour: i,
+      averageOccupancyRate: 0,
+    }));
+  }
 }

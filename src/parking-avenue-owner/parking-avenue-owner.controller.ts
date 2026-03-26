@@ -13,6 +13,8 @@ import * as fs from 'fs';
 import { Observable } from 'rxjs';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { GetDashboardOverviewDto } from './dto/get-dashboard-overview.dto';
+import { GetTodayOccupancyChartDto } from './dto/get-today-occupancy-chart.dto';
 
 const diskStorageConfig = diskStorage({
   destination: 'uploads',
@@ -101,7 +103,18 @@ export class ParkingAvenueOwnerController {
     return this.parkingAvenueOwnerService.getLiveActivityStream(ownerId);
   }
 
+  @Get('dashboard/overview')
+  async getDashboardOverview(@Req() req): Promise<GetDashboardOverviewDto> {
+    const ownerId = req.user.id;
+    return this.parkingAvenueOwnerService.getDashboardOverview(ownerId);
+  }
   
+  @Get('dashboard/today-occupancy-chart')
+  async getTodayOccupancyChartData(@Req() req): Promise<GetTodayOccupancyChartDto> {
+    const ownerId = req.user.id;
+    return this.parkingAvenueOwnerService.getTodayOccupancyChartData(ownerId);
+  }
+
   @Post('forgot-password')
   @ApiBody({ type: ForgotPasswordDto })
   forgotPassword(@Body() forgotPasswordDto : ForgotPasswordDto){
