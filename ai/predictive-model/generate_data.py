@@ -5,7 +5,7 @@ import pandas as pd
 
 parking_lots = [
     {
-        "id": "cd4a8ff2-b67d-4817-8b83-f9604c1ad406",
+        "id": "2edd544e-de83-40ac-9e51-dcd66b0b739a",
         "type": "OFF_STREET",
         "totalSpots": 120,
         "peak_hour": 17,

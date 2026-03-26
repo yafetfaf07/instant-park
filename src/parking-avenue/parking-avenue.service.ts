@@ -309,8 +309,18 @@ export class ParkingAvenueService {
           startTime: true,
           endTime: true,
           totalPrice: true,
+          qrCode: true,
           status: true,
-          user: { select: { firstName: true, lastName: true } }
+          parkingAvenue: { 
+            select: { 
+              name: true, 
+              parkingAvenueImage: {
+                select: {
+                  photosUrl: true,
+                }
+              }
+            }
+          }
         },
         orderBy: { startTime: 'desc' },
       }),

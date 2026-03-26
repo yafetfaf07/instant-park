@@ -111,4 +111,25 @@ export class TasksService {
             this.logger.error('Failed to process reservation reminders', error.stack);
         }
     }
+
+    @Cron(CronExpression.EVERY_MINUTE)
+    async cleanupStaleTempAccounts() {
+        try {
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+            const result = await this.databaseService.temp.deleteMany({
+                where: {
+                    createdAt: {
+                        lte: fiveMinutesAgo, 
+                    },
+                },
+            });
+
+            if (result.count > 0) {
+                this.logger.log(`Cleaned up ${result.count} expired OTP records from the Temp table.`);
+            }
+        } catch (error) {
+            this.logger.error('Failed to execute Temp table cleanup cron job', error.stack);
+        }
+    }
 }

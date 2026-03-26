@@ -17,6 +17,7 @@ export class CreateReservationDto {
   @Min(1)
   durationHours: number;
 
+  @ApiProperty({ description: 'plate number of the customer', example: 2 })
   @IsString()
   @IsNotEmpty()
   plateNumber: string;
