@@ -54,12 +54,26 @@ model ParkingAvenue {
   updatedAt           DateTime           @updatedAt
   reservations        Reservation[]
   approvalStatus      ApprovalStatus     @default(UNDERREVIEW)
-  rejectionReason     String?         
+  rejectionReason     String?   
+  subCity             SUBCITY      
 
   checkIns            CheckIn[]
   warden              Warden[] 
   parkingAvenueImage ParkingAvenueImage[]
   occupancyLogs OccupancyLog[]
+}
+enum SUBCITY {
+  ADDISKETEMA
+  AKAKYKALITI
+  ARADA
+  BOLE
+  GULLELE
+  KIRKOS
+  KOLFEKERANIO
+  LIDETA
+  NIFASSILKLAFTO
+  YEKA
+  LEMIKURA
 }
 
 enum PARKINGSTATUS {
@@ -67,6 +81,7 @@ enum PARKINGSTATUS {
   CLOSED
   MAINTENANCE
 }
+
 
 enum ParkingAvenueType {
   ON_STREET

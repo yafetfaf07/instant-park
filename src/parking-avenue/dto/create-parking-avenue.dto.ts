@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { PARKINGSTATUS } from '@prisma/client';
 import { Type } from 'class-transformer';
+import { SUBCITY } from '@prisma/client';
 
 export class CreateParkingAvenueDto {
   @ApiProperty({
@@ -94,4 +95,12 @@ export class CreateParkingAvenueDto {
   })
   @Allow()
   legalDoc: string
+
+  @ApiProperty({
+    description: 'Subcity parking avenue is located in',
+    enum: SUBCITY,
+    example: SUBCITY.BOLE,
+  })
+  @IsEnum(SUBCITY)
+  subCity: SUBCITY;
 }
