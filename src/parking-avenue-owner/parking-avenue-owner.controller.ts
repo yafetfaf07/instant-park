@@ -105,14 +105,12 @@ export class ParkingAvenueOwnerController {
   }
 
   @Get('dashboard/overview')
-  async getDashboardOverview(@Req() req): Promise<GetDashboardOverviewDto> {
-    const ownerId = req.user.id;
+  async getDashboardOverview(@Query('ownerId') ownerId: string): Promise<GetDashboardOverviewDto> {
     return this.parkingAvenueOwnerService.getDashboardOverview(ownerId);
   }
 
   @Get('dashboard/today-occupancy-chart')
-  async getTodayOccupancyChartData(@Req() req): Promise<GetTodayOccupancyChartDto> {
-    const ownerId = req.user.id;
+  async getTodayOccupancyChartData(@Query('ownerId') ownerId: string): Promise<GetTodayOccupancyChartDto> {
     return this.parkingAvenueOwnerService.getTodayOccupancyChartData(ownerId);
   }
 
