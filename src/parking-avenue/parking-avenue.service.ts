@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException, } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException, } from '@nestjs/common';
 import { CreateParkingAvenueDto } from './dto/create-parking-avenue.dto';
 import { UpdateParkingAvenueDto } from './dto/update-parking-avenue.dto';
 import { DatabaseService } from '../database/database.service';
@@ -533,6 +533,49 @@ export class ParkingAvenueService {
     }
 
     return parkingAvenue;
+  }
+
+
+  async createParkingAvenueByAdmin(createParkingAvenueDto: CreateParkingAvenueDto, username: string, adminId : string) {
+
+    const isAdmin = await this.databaseService.admin.findUnique({
+            where: {
+              id: adminId
+            }
+          });
+    
+    if(!isAdmin){
+      throw new UnauthorizedException("Only admin is allowed to view approval status")
+    }
+
+    const owner = await this.databaseService.parkingAvenueOwner.findUnique({
+      where: { username: username },
+    });
+
+    if (!owner) {
+      throw new NotFoundException('Parking avenue owner not found');
+    }
+
+    if (owner.isVerified !== ApprovalStatus.APPROVED) {
+      throw new BadRequestException("Owner must be verified to have a parking avenue registered");
+    }
+
+    const existing = await this.databaseService.parkingAvenue.findFirst({
+      where: {
+        OR: [{ name: createParkingAvenueDto.name }, { address: createParkingAvenueDto.address }]
+      }
+    });
+
+    if (existing) {
+      throw new ConflictException('Parking avenue with this name or address already exists');
+    }
+
+    return this.databaseService.parkingAvenue.create({
+      data: { 
+        ...createParkingAvenueDto, 
+        ownerId: owner.id 
+      },
+    });
   }
 
 }

@@ -9,6 +9,7 @@ import { Observable, fromEvent } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { LiveActivityEvent } from '../event/live-activity.event';
 import { EmailService } from 'src/email/email.service';
+import { CreateParkingAvenueOwnerByAdminDto } from './dto/create-parking-avenue-owner-by-admin.dto';
 
 @Injectable()
 export class ParkingAvenueOwnerService {
@@ -154,7 +155,7 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
     );
   } 
   
-  async createOwnerByAdmin(createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto, adminId: string) {
+  async createOwnerByAdmin(createParkingAvenueOwnerByAdminDto: CreateParkingAvenueOwnerByAdminDto, adminId: string) {
 
     const isAdmin = await this.db.admin.findUnique({
         where: {
@@ -171,30 +172,30 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
     const userCheck = await this.db.parkingAvenueOwner.findFirst({
           where: {
             OR: [
-                  { username: createParkingAvenueOwnerDto.username },
-                  { email: createParkingAvenueOwnerDto.email },
-                  { phoneNo: createParkingAvenueOwnerDto.phoneNo },
+                  { username: createParkingAvenueOwnerByAdminDto.username },
+                  { email: createParkingAvenueOwnerByAdminDto.email },
+                  { phoneNo: createParkingAvenueOwnerByAdminDto.phoneNo },
               ]
           }
         });
   
     if (userCheck){
-      if(userCheck.email == createParkingAvenueOwnerDto.email ){
+      if(userCheck.email == createParkingAvenueOwnerByAdminDto.email ){
         throw new ConflictException('email already exists');
       }
 
-        if(userCheck.phoneNo == createParkingAvenueOwnerDto.phoneNo){
+        if(userCheck.phoneNo == createParkingAvenueOwnerByAdminDto.phoneNo){
             throw new ConflictException('phoneNo already exists');
           }
 
-          if(userCheck.username == createParkingAvenueOwnerDto.username){
+          if(userCheck.username == createParkingAvenueOwnerByAdminDto.username){
             throw new ConflictException('username already exists');
           }
         }
 
     const newOwner = await this.db.parkingAvenueOwner.create({
       data: {
-        ...createParkingAvenueOwnerDto,
+        ...createParkingAvenueOwnerByAdminDto,
         password: hashedPassword,
         isCreatedByAdmin: true
       },
@@ -212,7 +213,7 @@ async getLiveActivityStream(ownerId: string): Promise<Observable<MessageEvent>> 
         console.error("Failed to send email", error);
       }
 
-    return { message: 'Owner created successfully', username: createParkingAvenueOwnerDto.username, tempPassword: plainPassword };
+    return { message: 'Owner created successfully', username: createParkingAvenueOwnerByAdminDto.username, tempPassword: plainPassword };
   }
 
   async resendCredentials(email: string) {
