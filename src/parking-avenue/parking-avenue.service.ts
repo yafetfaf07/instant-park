@@ -3,7 +3,7 @@ import { CreateParkingAvenueDto } from './dto/create-parking-avenue.dto';
 import { UpdateParkingAvenueDto } from './dto/update-parking-avenue.dto';
 import { DatabaseService } from '../database/database.service';
 import { SearchParkingDto } from './dto/search-parking-avenue.dto';
-import { ApprovalStatus, ParkingAvenue, Prisma } from '@prisma/client';
+import { ApprovalStatus, ParkingAvenue, ParkingAvenueType, Prisma } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { GetReservationsDto } from './dto/get-reservations.dto';
@@ -18,6 +18,7 @@ import { GetParkingAvenueDetailDto } from './dto/get-parking-avenue-detail.dto';
 import { CheckInService } from '../check-in/check-in.service';
 import { CreateCheckInDto } from 'src/check-in/dto/create-check-in.dto';
 import { CreateParkingAvenueByAdminDto } from './dto/create-parking-avenue-by-admin.dto';
+import { FilterParkingDto } from './dto/filter-parking.dto';
 const PAGE_SIZE = 10;
 
 @Injectable()
@@ -649,15 +650,46 @@ async verifyPayment(bookingRef: string) {
     if (existing) {
       throw new ConflictException('Parking avenue with this name or address already exists');
     }
+    
+    if (createParkingAvenueByAdminDto.type === ParkingAvenueType.OFF_STREET) {
+        if (createParkingAvenueByAdminDto.endLatitude || createParkingAvenueByAdminDto.endLongitude) {
+            throw new BadRequestException('End coordinates are not required for OFF_STREET parking. Please remove them.');
+        }
+    }
+
+    if (createParkingAvenueByAdminDto.type === ParkingAvenueType.ON_STREET) {
+        if (!createParkingAvenueByAdminDto.endLatitude || !createParkingAvenueByAdminDto.endLongitude) {
+            throw new BadRequestException('End latitude and longitude are required for ON_STREET parking');
+        }
+    }
+    const endLatitude = createParkingAvenueByAdminDto.endLatitude ?? createParkingAvenueByAdminDto.latitude;
+    const endLongitude = createParkingAvenueByAdminDto.endLongitude ?? createParkingAvenueByAdminDto.longitude;
 
     const { username, ...parkingData } = createParkingAvenueByAdminDto;
+
+    
 
     return this.databaseService.parkingAvenue.create({
       data: { 
         ...parkingData, 
-        ownerId: owner.id 
+        endLatitude,
+        endLongitude,
+        ownerId: owner.id
       },
     });
   }
 
+
+  async findAll(filterDto: FilterParkingDto) {
+    const { type } = filterDto;
+
+    return this.databaseService.parkingAvenue.findMany({
+      where: {
+        ...(type && { type: type }),
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
 }

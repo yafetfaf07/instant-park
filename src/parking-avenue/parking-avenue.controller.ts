@@ -16,6 +16,8 @@ import { extname } from 'path';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import { CreateParkingAvenueImageDto } from './dto/create-parking-avenue-image.dto';
+import { ParkingAvenueType } from '@prisma/client';
+import { FilterParkingDto } from './dto/filter-parking.dto';
 
 
 const diskStorageConfig = diskStorage({
@@ -269,9 +271,13 @@ export class ParkingAvenueController {
     }
 
   }
-
-
-
+  
+  @Get('list')
+  @ApiOperation({ summary: 'Get all parking avenues with optional filtering by type' })
+  @ApiQuery({ name: 'type', enum: ParkingAvenueType, required: false })
+  async findAll(@Query() filterDto: FilterParkingDto) {
+  return this.parkingAvenueService.findAll(filterDto);
+  }
 
 
 }

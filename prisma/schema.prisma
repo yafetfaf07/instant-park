@@ -63,6 +63,9 @@ model ParkingAvenue {
   parkingAvenueImage ParkingAvenueImage[]
   occupancyLogs      OccupancyLog[]
   incidentReport     IncidentReport[]
+
+  endLatitude    Float? // Optional, for ON_STREET range
+  endLongitude   Float? // Optional, for ON_STREET range
 }
 
 enum SUBCITY {

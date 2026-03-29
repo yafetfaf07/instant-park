@@ -5,10 +5,11 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Min,
 } from 'class-validator';
-import { PARKINGSTATUS } from '@prisma/client';
+import { ParkingAvenueType, PARKINGSTATUS } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { SUBCITY } from '@prisma/client';
 
@@ -112,4 +113,32 @@ export class CreateParkingAvenueByAdminDto {
   })
   @IsEnum(SUBCITY)
   subCity: SUBCITY;
+
+  @ApiProperty({
+    description: 'Type of parking avenue',
+    enum: ParkingAvenueType,
+    default: ParkingAvenueType.OFF_STREET,
+  })
+  @IsEnum(ParkingAvenueType)
+  type: ParkingAvenueType;
+
+  @ApiProperty({
+    description: 'End Latitude coordinate (for on-street ranges)',
+    example: '-1.2922',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  endLatitude?: number;
+
+  @ApiProperty({
+    description: 'End Longitude coordinate (for on-street ranges)',
+    example: '36.8220',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  endLongitude?: number;
 }
