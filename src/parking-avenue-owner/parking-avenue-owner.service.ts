@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, UnauthorizedException, NotFoundException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { CreateParkingAvenueOwnerDto } from './dto/create-parking-avenue-owner.dto';
 import { UpdateParkingAvenueOwnerDto } from './dto/update-parking-avenue-owner.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -423,5 +423,48 @@ async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
     }
   return { message: 'Credentials have been resent to your email' };
 }
+
+
+  async updateProfile(id: string, dto: UpdateParkingAvenueOwnerDto) {
+    const updateData: any = { ...dto };
+
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    const conflicts = await this.db.parkingAvenueOwner.findFirst({
+      where: {
+        NOT: { id },
+        OR: [
+          { username: dto.username },
+          { email: dto.email },
+          { phoneNo: dto.phoneNo },
+        ],
+      },
+    });
+
+    if (conflicts) {
+      if (conflicts.username === dto.username) throw new ConflictException('Username taken');
+      if (conflicts.email === dto.email) throw new ConflictException('Email taken');
+      if (conflicts.phoneNo === dto.phoneNo) throw new ConflictException('Phone number taken');
+    }
+
+    try {
+      return await this.db.parkingAvenueOwner.update({
+        where: { id },
+        data: updateData,
+        select: { 
+          id: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          phoneNo: true,
+          email: true,
+        }
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Update failed');
+    }
+  }
 
 }

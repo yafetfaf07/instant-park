@@ -143,6 +143,17 @@ export class ParkingAvenueOwnerController {
     async resendCredentials(@Body('email') email: string) {
       return this.parkingAvenueOwnerService.resendCredentials(email);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch('update/parking-avenue-owner')
+    @ApiOperation({ summary: 'Update profile (including sensitive fields)' })
+    @ApiBearerAuth('JWT-auth')
+    async updateProfile(
+      @Req() req: RequestWithUser,
+      @Body() dto: UpdateParkingAvenueOwnerDto,
+    ) {
+      return this.parkingAvenueOwnerService.updateProfile(req.user.id, dto);
+    }
   
 
 
