@@ -14,6 +14,7 @@ import { WardenModule } from './warden/warden.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './tasks/tasks.module';
+import { IncidentReportModule } from './incident-report/incident-report.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { TasksModule } from './tasks/tasks.module';
     CheckInModule,
     WardenModule,
     TasksModule,
+    IncidentReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

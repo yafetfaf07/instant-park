@@ -15,19 +15,20 @@ datasource db {
 }
 
 model Customer {
-  id        String    @id @default(uuid())
-  firstName String
-  lastName  String
-  username  String    @unique
-  phoneNo   String    @unique
-  gender    Gender
-  location  String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  lastLogin DateTime?
-  vehichles Vehicle[]
-  reservations Reservation[]
-  checkIns CheckIn[]
+  id             String           @id @default(uuid())
+  firstName      String
+  lastName       String
+  username       String           @unique
+  phoneNo        String           @unique
+  gender         Gender
+  location       String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  lastLogin      DateTime?
+  vehichles      Vehicle[]
+  reservations   Reservation[]
+  checkIns       CheckIn[]
+  incidentReport IncidentReport[]
 }
 
 enum Gender {
@@ -36,32 +37,34 @@ enum Gender {
 }
 
 model ParkingAvenue {
-  id                  String             @id @default(uuid())
-  name                String             @unique
-  address             String
-  latitude            Float
-  longitude           Float
-  ownerId             String
-  owner               ParkingAvenueOwner @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  workingHrs          String
-  hourlyRate          Float
-  type                ParkingAvenueType @default(OFF_STREET)
-  totalSpots          Int
-  status              PARKINGSTATUS
-  currentSpots        Int
-  legalDoc            String
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  reservations        Reservation[]
-  approvalStatus      ApprovalStatus     @default(UNDERREVIEW)
-  rejectionReason     String?   
-  subCity             SUBCITY      
+  id              String             @id @default(uuid())
+  name            String             @unique
+  address         String
+  latitude        Float
+  longitude       Float
+  ownerId         String
+  owner           ParkingAvenueOwner @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workingHrs      String
+  hourlyRate      Float
+  type            ParkingAvenueType  @default(OFF_STREET)
+  totalSpots      Int
+  status          PARKINGSTATUS
+  currentSpots    Int
+  legalDoc        String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  reservations    Reservation[]
+  approvalStatus  ApprovalStatus     @default(UNDERREVIEW)
+  rejectionReason String?
+  subCity         SUBCITY
 
-  checkIns            CheckIn[]
-  warden              Warden[] 
+  checkIns           CheckIn[]
+  warden             Warden[]
   parkingAvenueImage ParkingAvenueImage[]
-  occupancyLogs OccupancyLog[]
+  occupancyLogs      OccupancyLog[]
+  incidentReport     IncidentReport[]
 }
+
 enum SUBCITY {
   ADDISKETEMA
   AKAKYKALITI
@@ -82,11 +85,11 @@ enum PARKINGSTATUS {
   MAINTENANCE
 }
 
-
 enum ParkingAvenueType {
   ON_STREET
   OFF_STREET
-	@@map("PARKINGAVENUETYPE")
+
+  @@map("PARKINGAVENUETYPE")
 }
 
 model Admin {
@@ -99,24 +102,23 @@ model Admin {
 }
 
 model ParkingAvenueOwner {
-  id                String          @id @default(uuid())
-  firstName         String
-  lastName          String
-  username          String          @unique
-  password          String
-  phoneNo           String          @unique
-  email             String          @unique
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  lastLogin         DateTime?
-  isVerified        ApprovalStatus  @default(UNDERREVIEW)
-  parkingAvenues    ParkingAvenue[]
-  personalId        String
-  rejectionReason   String?     
-  resetToken        String?
-  resetTokenExpiry  DateTime? 
-  isCreatedByAdmin  Boolean         @default(false)
-
+  id               String          @id @default(uuid())
+  firstName        String
+  lastName         String
+  username         String          @unique
+  password         String
+  phoneNo          String          @unique
+  email            String          @unique
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  lastLogin        DateTime?
+  isVerified       ApprovalStatus  @default(UNDERREVIEW)
+  parkingAvenues   ParkingAvenue[]
+  personalId       String
+  rejectionReason  String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  isCreatedByAdmin Boolean         @default(false)
 }
 
 model Reservation {
@@ -141,14 +143,14 @@ model Reservation {
   updatedAt DateTime @updatedAt
 }
 
-
 model Vehicle {
-  id	           Int             @id @default(autoincrement())
-  licensePlate   String          
-  createdAt	     DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  ownerId        String
-  owner          Customer        @relation(fields: [ownerId], references: [id])
+  id           Int      @id @default(autoincrement())
+  licensePlate String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  ownerId      String
+  owner        Customer @relation(fields: [ownerId], references: [id])
+
   @@unique([ownerId, licensePlate])
 }
 
@@ -158,45 +160,42 @@ model CheckIn {
   parkingAvenueId String
   parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id])
   userId          String?
-  user            Customer?      @relation(fields: [userId], references: [id])       
-  createdAt	      DateTime      @default(now())
+  user            Customer?     @relation(fields: [userId], references: [id])
+  createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
 
-model Temp{
-
-  id              String    @id @default(uuid())
-  firstName       String
-  lastName        String
-  username        String    @unique
-  phoneNo         String    @unique
-  gender          Gender
-  location        String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  lastLogin       DateTime?
-  verificationId  String
-  code            String    @unique
-
-
-
+model Temp {
+  id             String    @id @default(uuid())
+  firstName      String
+  lastName       String
+  username       String    @unique
+  phoneNo        String    @unique
+  gender         Gender
+  location       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastLogin      DateTime?
+  verificationId String
+  code           String    @unique
 }
 
 model Warden {
-  id                    String                  @id @default(uuid())
-  firstName             String
-  lastName              String
-  username              String                  @unique
-  phoneNo               String                  @unique
-  gender                Gender
-  currentLocation       String
-  residenceArea         String
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  lastLogin             DateTime?
-  wardenStatus          WardenStatus            @default(OFFDUTY)
-  parkingAvenueId       String                  
-  parkingAvenue         ParkingAvenue           @relation(fields: [parkingAvenueId], references: [id])
+  id              String           @id @default(uuid())
+  firstName       String
+  lastName        String
+  username        String           @unique
+  phoneNo         String           @unique
+  gender          Gender
+  currentLocation String
+  residenceArea   String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lastLogin       DateTime?
+  wardenStatus    WardenStatus     @default(OFFDUTY)
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue    @relation(fields: [parkingAvenueId], references: [id])
+  incidentReport  IncidentReport[]
 }
 
 enum WardenStatus {
@@ -205,34 +204,54 @@ enum WardenStatus {
 }
 
 enum ApprovalStatus {
-  
-    UNDERREVIEW 
-    APPROVED 
-    REJECTED 
+  UNDERREVIEW
+  APPROVED
+  REJECTED
 }
 
 model ParkingAvenueImage {
-  
-  id                  String             @id @default(uuid())
-  parkingAvenueId     String             
-  parkingAvenue       ParkingAvenue      @relation(fields: [parkingAvenueId], references: [id])
-  photosUrl	          String
+  id              String        @id @default(uuid())
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id])
+  photosUrl       String
 }
 
 model OccupancyLog {
-  id              String        @id @default(uuid())
-  timestamp       DateTime      @default(now())
-  
+  id        String   @id @default(uuid())
+  timestamp DateTime @default(now())
+
   parkingAvenueId String
   parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id], onDelete: Cascade)
-  
+
   hour      Int
   dayOfWeek Int
   isWeekend Int
 
-  totalSpots      Int
-  currentSpots    Int
-  occupancyRate   Float
+  totalSpots    Int
+  currentSpots  Int
+  occupancyRate Float
 
   @@index([parkingAvenueId, timestamp])
+}
+
+model IncidentReport {
+  id        String         @id @default(uuid())
+  category  ReportCategory
+  reason    String
+  createdAt DateTime       @default(now())
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  wardenId   String?
+  warden     Warden?   @relation(fields: [wardenId], references: [id])
+
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id])
+}
+
+enum ReportCategory {
+  ACCIDENT
+  THEFT
+  PARKINGSPACETAKEN
+  OTHER
 }
