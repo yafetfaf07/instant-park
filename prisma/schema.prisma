@@ -190,7 +190,6 @@ model Warden {
   username        String           @unique
   phoneNo         String           @unique
   gender          Gender
-  currentLocation String
   residenceArea   String
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
