@@ -12,6 +12,7 @@ import { EmailService } from 'src/email/email.service';
 import { GetDashboardOverviewDto } from './dto/get-dashboard-overview.dto';
 import { GetTodayOccupancyChartDto } from './dto/get-today-occupancy-chart.dto';
 import { CreateParkingAvenueOwnerByAdminDto } from './dto/create-parking-avenue-owner-by-admin.dto';
+import * as fs from 'fs';
 const PAGE_SIZE = 10;
 
 @Injectable()
@@ -426,11 +427,20 @@ async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
 
 
   async updateProfile(id: string, dto: UpdateParkingAvenueOwnerDto) {
+
+    const existingOwner = await this.db.parkingAvenueOwner.findUnique({ where: { id } });
+
     const updateData: any = { ...dto };
 
     if (dto.password) {
       updateData.password = await bcrypt.hash(dto.password, 10);
     }
+
+     if (dto.personalId && existingOwner?.personalId) {
+        if (fs.existsSync(existingOwner.personalId)) {
+          fs.unlinkSync(existingOwner.personalId);
+        }
+      }
 
     const conflicts = await this.db.parkingAvenueOwner.findFirst({
       where: {

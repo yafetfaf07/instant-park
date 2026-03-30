@@ -146,13 +146,37 @@ export class ParkingAvenueOwnerController {
 
     @UseGuards(JwtAuthGuard)
     @Patch('update/parking-avenue-owner')
-    @ApiOperation({ summary: 'Update profile (including sensitive fields)' })
+    @ApiOperation({ summary: 'Update parking avenue owner profile' })
+    @ApiConsumes('multipart/form-data')
     @ApiBearerAuth('JWT-auth')
+    @UseInterceptors(FileInterceptor('personalId', { storage: diskStorageConfig }))
     async updateProfile(
       @Req() req: RequestWithUser,
       @Body() dto: UpdateParkingAvenueOwnerDto,
+      @UploadedFile() personalId: Express.Multer.File,
+
     ) {
-      return this.parkingAvenueOwnerService.updateProfile(req.user.id, dto);
+
+         if (personalId) {
+            if (personalId.size > 2 * 1024 * 1024) {
+              this.cleanupFiles(personalId.path);
+              throw new BadRequestException('Image must be smaller than 2MB');
+            }
+            if (!personalId.mimetype.match(/image\/(jpg|jpeg|png)/)) {
+              this.cleanupFiles(personalId.path);
+              throw new BadRequestException('Only image files (jpg, png, jpeg) are allowed');
+            }
+            dto.personalId = personalId.path;
+          }
+
+          try {
+              return await this.parkingAvenueOwnerService.updateProfile(req.user.id, dto);
+            } 
+          catch (error) {
+            if (personalId) this.cleanupFiles(personalId.path);
+            throw error;
+          }
+
     }
   
 
