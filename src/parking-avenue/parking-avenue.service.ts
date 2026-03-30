@@ -647,10 +647,14 @@ async verifyPayment(bookingRef: string) {
       }
     });
 
-    if (existing) {
-      throw new ConflictException('Parking avenue with this name or address already exists');
+    if (existing?.name == createParkingAvenueByAdminDto.name) {
+      throw new ConflictException('Parking avenue with this name already exists');
     }
-    
+
+    if (existing?.address == createParkingAvenueByAdminDto.address) {
+      throw new ConflictException('Parking avenue with this address already exists');
+    }
+
     if (createParkingAvenueByAdminDto.type === ParkingAvenueType.OFF_STREET) {
         if (createParkingAvenueByAdminDto.endLatitude || createParkingAvenueByAdminDto.endLongitude) {
             throw new BadRequestException('End coordinates are not required for OFF_STREET parking. Please remove them.');
