@@ -117,9 +117,10 @@ export class AdminService {
           isVerified: getByApprovalStatus.approvalStatus,
           ...(cursor ? { id: { gt: cursor } } : {}),
         },
-        orderBy: {
-            id: 'asc',
-          },
+        orderBy: [
+            { createdAt: 'desc' }, 
+            { id: 'asc' } 
+          ],
         take: PAGE_SIZE + 1,          
         omit: {
             password: true,
@@ -250,10 +251,11 @@ export class AdminService {
           approvalStatus: getByApprovalStatus.approvalStatus,
           ...(cursor ? { id: { gt: cursor } } : {}),
         },
-        orderBy: {
-            id: 'asc',
-          },
-          take: PAGE_SIZE + 1
+        orderBy: [
+            { createdAt: 'desc' }, 
+            { id: 'asc' } 
+          ],
+        take: PAGE_SIZE + 1
       }
     );
 
@@ -423,9 +425,10 @@ export class AdminService {
           where: {
             ...(cursor ? { id: { gt: cursor } } : {}),
           },
-          orderBy: {
-            id: 'asc',
-          },
+          orderBy: [
+            { createdAt: 'desc' }, 
+            { id: 'asc' } 
+          ],
           take: PAGE_SIZE + 1
         }
       );
@@ -446,7 +449,10 @@ export class AdminService {
         where: {
           ...(cursor ? { id: { gt: cursor } } : {}),
         },
-        orderBy: { id: 'asc' },
+        orderBy: [
+          { createdAt: 'desc' }, 
+          { id: 'asc' } 
+        ],
         omit: { password: true },
         take: PAGE_SIZE + 1,
         include: {

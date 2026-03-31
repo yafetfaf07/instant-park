@@ -2,14 +2,24 @@ import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/co
 import { CreateIncidentReportDto } from './dto/create-incident-report.dto';
 import { UpdateIncidentReportDto } from './dto/update-incident-report.dto';
 import { DatabaseService } from '../database/database.service';
+const PAGE_SIZE = 2;
 
 @Injectable()
 export class IncidentReportService {
   constructor(private readonly db: DatabaseService) {}
 
+    paginate(items: any[]) {
+      const hasMore = items.length > PAGE_SIZE;
+      const data = hasMore ? items.slice(0, PAGE_SIZE) : items;
+      const nextCursor = hasMore
+        ? data[data.length - 1].id
+        : null;
+
+        return { data, hasMore, nextCursor };
+    }
+
   async create(dto: CreateIncidentReportDto, reporterId: string,) {
     
-
      const isCustomer = await this.db.customer.findUnique({
         where: {
           id: reporterId
@@ -62,7 +72,7 @@ export class IncidentReportService {
   }
 
 
-  async getReportsByOwner(ownerId: string, parkingAvenueId: string) {
+  async getReportsByOwner(ownerId: string, parkingAvenueId: string, cursor? : string) {
 
     const avenue = await this.db.parkingAvenue.findFirst({
       where: {
@@ -75,21 +85,26 @@ export class IncidentReportService {
       throw new UnauthorizedException('You are not authorized to view reports for this avenue, or the avenue does not exist.');
     }
 
-    return await this.db.incidentReport.findMany({
+    const reports = await this.db.incidentReport.findMany({
       where: {
         parkingAvenueId: parkingAvenueId,
+        ...(cursor ? { id: { lt: cursor } } : {}),
       },
-      orderBy: {
-        createdAt: 'desc', 
-      },
+      take: PAGE_SIZE + 1,
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
       include: {
         customer: { select: { username: true, firstName: true } },
         warden: { select: { username: true, firstName: true } },
       }
     });
+
+    return this.paginate(reports);
   }
 
-  async getReportsForWarden(wardenId: string) {
+  async getReportsForWarden(wardenId: string, cursor?: string) {
 
     const warden = await this.db.warden.findUnique({
       where: { id: wardenId },
@@ -100,18 +115,23 @@ export class IncidentReportService {
       throw new NotFoundException('Warden profile not found');
     }
 
-    return await this.db.incidentReport.findMany({
+    const reports =  await this.db.incidentReport.findMany({
       where: {
         parkingAvenueId: warden.parkingAvenueId,
+        ...(cursor ? { id: { lt: cursor } } : {}),
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      take: PAGE_SIZE + 1,
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
       include: {
         customer: { select: { firstName: true, lastName: true } },
         warden: { select: { firstName: true, lastName: true } },
       }
     });
+  
+    return this.paginate(reports);
   }
 
 }
