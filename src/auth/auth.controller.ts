@@ -82,4 +82,15 @@ export class AuthController {
     return this.auth.updateProfile(req.user.id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('validate-token')
+  @ApiOperation({ summary: 'Check if current JWT token is valid' })
+  @ApiResponse({ status: 200, description: 'Token is valid' })
+  @ApiResponse({ status: 401, description: 'Token is invalid or expired' })
+  @ApiBearerAuth('JWT-auth')
+  validateToken() {
+    return { valid: true };
+  }
+
+
 }
