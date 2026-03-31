@@ -87,7 +87,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Get parking avenue owners by approval status'})
   @ApiQuery({ name: 'cursor', required: false, type: String }) 
   parkingAvenueOwnerStatus(@Query() getByApprovalStatus: GetByApprovalStatus, @Req() req: RequestWithUser, @Query('cursor') cursor?: string){
-    return this.adminService.parkingAvenueOwnerStatus(getByApprovalStatus, req.user.id, cursor)
+    return this.adminService.parkingAvenueOwnerStatus(getByApprovalStatus, req.user.id, this.parseCursor(cursor))
   }
 
   @UseGuards(JwtAuthGuard)
@@ -126,7 +126,7 @@ export class AdminController {
   @ApiBearerAuth('JWT-auth')
   @ApiQuery({ name: 'cursor', required: false, type: String }) 
   getByApprovalStatus(@Query() getByApprovalStatus: GetByApprovalStatus, @Req() req: RequestWithUser, @Query('cursor') cursor?: string){
-    return this.adminService.getByApprovalStatus(getByApprovalStatus, req.user.id);
+    return this.adminService.getByApprovalStatus(getByApprovalStatus, req.user.id, this.parseCursor(cursor));
   }
 
   @UseGuards(JwtAuthGuard)
