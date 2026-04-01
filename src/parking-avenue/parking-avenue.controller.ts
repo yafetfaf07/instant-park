@@ -154,7 +154,7 @@ export class ParkingAvenueController {
   ) {
     // TODO: we need to make sure only a warden assigned to the provided parking avenue can access this information
 
-    return this.parkingAvenueService.getReservationsByAvenue(id, query);
+return this.parkingAvenueService.getReservationsByAvenue(id, query, req.user.id);
   }
 
   //@UseGuards(JwtAuthGuard)
