@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/co
 import { CreateIncidentReportDto } from './dto/create-incident-report.dto';
 import { UpdateIncidentReportDto } from './dto/update-incident-report.dto';
 import { DatabaseService } from '../database/database.service';
-const PAGE_SIZE = 2;
+const PAGE_SIZE = 10;
 
 @Injectable()
 export class IncidentReportService {

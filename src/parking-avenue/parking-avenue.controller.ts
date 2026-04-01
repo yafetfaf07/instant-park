@@ -272,7 +272,7 @@ export class ParkingAvenueController {
 
   }
   
-  @Get('list')
+  @Get('list/optionalfiter')
   @ApiOperation({ summary: 'Get all parking avenues with optional filtering by type' })
   @ApiQuery({ name: 'type', enum: ParkingAvenueType, required: false })
   @ApiBearerAuth('JWT-auth')
