@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateWardenDto } from './dto/create-warden.dto';
 import { UpdateWardenDto } from './dto/update-warden.dto';
 import { DatabaseService } from '../database/database.service';
@@ -11,8 +11,8 @@ import { LoginVerifyDto } from 'src/auth/dto/loginVerify.dto';
 import { GetUsernameWardenDto } from './dto/get-username-warden.dto';
 import { GetPhoneNoWardenDto } from './dto/get-phoneno-warden.dto';
 import { ReassignWardenDto } from './dto/reassign-warden.dto';
-import { ApprovalStatus } from '@prisma/client';
-
+import { ApprovalStatus, WardenStatus } from '@prisma/client';
+const PAGE_SIZE = 10;
 
 @Injectable()
 export class WardenService {
@@ -24,6 +24,15 @@ export class WardenService {
     private configService: ConfigService 
   ) { }
   
+    paginate(items: any[]) {
+      const hasMore = items.length > PAGE_SIZE;
+      const data = hasMore ? items.slice(0, PAGE_SIZE) : items;
+      const nextCursor = hasMore
+        ? data[data.length - 1].id
+        : null;
+
+        return { data, hasMore, nextCursor };
+    }
   async create(createWardenDto: CreateWardenDto, parkingAvenueOwnerId: string) {
     
     
@@ -439,6 +448,54 @@ export class WardenService {
     } catch (error) {
       throw new InternalServerErrorException('Failed to reassign warden');
     }
+  }
+
+   async getWardenStats(adminId: string, cursor?: string) {
+
+      const isAdmin = await this.databaseService.admin.findUnique({ where: { id: adminId } });
+      
+      if (!isAdmin) {
+        throw new UnauthorizedException("Only admin is allowed to view warden stats");
+      }
+
+      const [wardensRaw, totalWardens, onDutyCount, offDutyCount] = await Promise.all([
+
+        this.databaseService.warden.findMany({
+          cursor: cursor ? { id: cursor } : undefined,
+          skip: cursor ? 1 : 0, 
+          take: PAGE_SIZE + 1, 
+          orderBy: [
+            { createdAt: 'desc' }, 
+            { id: 'asc' } 
+          ],
+          include: {
+            parkingAvenue: {
+              select: { name: true } 
+            }
+          },
+        }),
+        this.databaseService.warden.count(),
+        this.databaseService.warden.count({
+          where: { wardenStatus: WardenStatus.ONDUTY },
+        }),
+        this.databaseService.warden.count({
+          where: { wardenStatus: WardenStatus.OFFDUTY },
+        }),
+      ]);
+
+      const { data, hasMore, nextCursor } = this.paginate(wardensRaw);
+
+
+      return {
+        wardens: data,
+        pagination: {
+          hasMore,
+          nextCursor,
+          totalWardens,
+          onDutyCount,
+          offDutyCount,
+        },
+      };
   }
 
 }

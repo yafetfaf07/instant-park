@@ -113,9 +113,10 @@ export class AdminService {
       }
 
       const ownersList = await this.db.parkingAvenueOwner.findMany({
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0, 
         where: {
           isVerified: getByApprovalStatus.approvalStatus,
-          ...(cursor ? { id: { gt: cursor } } : {}),
         },
         orderBy: [
             { createdAt: 'desc' }, 
@@ -247,9 +248,10 @@ export class AdminService {
 
     const parkingAvenuesByStatus = await this.db.parkingAvenue.findMany(
       {
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0, 
         where: {
           approvalStatus: getByApprovalStatus.approvalStatus,
-          ...(cursor ? { id: { gt: cursor } } : {}),
         },
         orderBy: [
             { createdAt: 'desc' }, 
@@ -422,9 +424,8 @@ export class AdminService {
 
       const parkingAvenues = await this.db.parkingAvenue.findMany(
         {
-          where: {
-            ...(cursor ? { id: { gt: cursor } } : {}),
-          },
+          cursor: cursor ? { id: cursor } : undefined,
+          skip: cursor ? 1 : 0, 
           orderBy: [
             { createdAt: 'desc' }, 
             { id: 'asc' } 
@@ -446,9 +447,8 @@ export class AdminService {
       }
 
       const unverifiedOwnersList = await this.db.parkingAvenueOwner.findMany({
-        where: {
-          ...(cursor ? { id: { gt: cursor } } : {}),
-        },
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0, 
         orderBy: [
           { createdAt: 'desc' }, 
           { id: 'asc' } 

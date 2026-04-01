@@ -437,9 +437,10 @@ async verifyPayment(bookingRef: string) {
     
     const parkingAvenues = await this.databaseService.parkingAvenue.findMany(
       {
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0, 
         where: {
           ownerId: parkingAvenueOwnerId,
-            ...(cursor ? { id: { gt: cursor } } : {}),
         },
         orderBy: {
             id: 'asc',

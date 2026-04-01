@@ -33,5 +33,6 @@ import { HttpModule } from '@nestjs/axios';
   ],
   controllers: [WardenController],
   providers: [WardenService],
+  exports: [WardenService]
 })
 export class WardenModule {}

@@ -21,7 +21,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateParkingAvenueOwnerByAdminDto } from 'src/parking-avenue-owner/dto/create-parking-avenue-owner-by-admin.dto';
 import { CreateParkingAvenueByAdminDto } from 'src/parking-avenue/dto/create-parking-avenue-by-admin.dto';
 import { ParkingAvenueService } from 'src/parking-avenue/parking-avenue.service';
-
+import { WardenService } from 'src/warden/warden.service';
 
 
 const diskStorageConfig = diskStorage({
@@ -41,6 +41,7 @@ export class AdminController {
     private readonly eventEmitter: EventEmitter2,
     private readonly parkingAvenueService: ParkingAvenueService,
     private readonly parkingAvenueOwnerService: ParkingAvenueOwnerService,
+    private readonly wardenService: WardenService
   ) {}
 
   private cleanupFiles(personalId: string) {
@@ -247,6 +248,16 @@ export class AdminController {
       this.cleanupFiles(legalDoc.path);
       throw error;
     }
+  }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Get('list-wardens')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'get stats for wardens by admin'})
+  @ApiQuery({ name: 'cursor', required: false, type: String }) 
+  getWardenList(@Req() req: RequestWithUser, @Query('cursor') cursor?: string){
+    return this.wardenService.getWardenStats(req.user.id, this.parseCursor(cursor))
   }
 
 }
