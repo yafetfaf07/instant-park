@@ -560,20 +560,3 @@ npx prisma db seed
 
 ---
 
-## Known Issues
-
-From `todo.txt` and code review:
-
-1. **`isVerified` on wrong model** — Currently on `ParkingAvenueOwner`; should be on `ParkingAvenue`
-2. **Reservation status as string** — Should be a Prisma enum instead of a plain `String`
-3. **Customer missing `email` field** — No `email` field on the `Customer` model
-4. **Cover image upload** — Need to handle cover image upload when creating a parking avenue
-5. **Auth guard removed** — Several endpoints have `@UseGuards(JwtAuthGuard)` commented out due to 401 errors; needs investigation
-6. **Hardcoded phone number** — `payment.service.ts` uses `"0900123456"` instead of the actual customer's phone
-7. **Availability logic** — Reservation availability checks against `currentSpots` instead of `totalSpots - confirmedReservations`
-
----
-
-## License
-
-UNLICENSED — Private project.
