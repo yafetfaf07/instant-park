@@ -13,6 +13,7 @@ import { GetDashboardOverviewDto } from './dto/get-dashboard-overview.dto';
 import { GetTodayOccupancyChartDto } from './dto/get-today-occupancy-chart.dto';
 import { CreateParkingAvenueOwnerByAdminDto } from './dto/create-parking-avenue-owner-by-admin.dto';
 import * as fs from 'fs';
+import { WardenStatus } from '@prisma/client';
 const PAGE_SIZE = 10;
 
 @Injectable()
@@ -284,47 +285,58 @@ async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
     };
   }
 
-  async getTodayOccupancyChartData(ownerId: string): Promise<GetTodayOccupancyChartDto> {
-    const avenues = await this.db.parkingAvenue.findMany({
-      where: { ownerId: ownerId },
-      select: { id: true },
-    });
+async getTodayOccupancyChartData(ownerId: string): Promise<any[]> {
+  const avenues = await this.db.parkingAvenue.findMany({
+    where: { ownerId: ownerId },
+    select: { id: true },
+  });
 
-    const avenueIds = avenues.map((ave) => ave.id);
+  const avenueIds = avenues.map((ave) => ave.id);
 
-    if (avenueIds.length === 0) {
-      return this.generateEmpty24HourArray();
-    }
+  const result = Array.from({ length: 24 }, (_, hour) => {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    return {
+      time: `${displayHour} ${period}`,
+      occupancy: 0,
+    };
+  });
 
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-
-    const occupancyLogsAggregated = await this.db.occupancyLog.groupBy({
-      by: ['hour'],
-      where: {
-        parkingAvenueId: { in: avenueIds },
-        timestamp: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-      _avg: {
-        occupancyRate: true,
-      },
-      orderBy: {
-        hour: 'asc',
-      },
-    });
-
-    const fullDayData: GetTodayOccupancyChartDto = this.generateEmpty24HourArray();
-
-    occupancyLogsAggregated.forEach((log) => {
-      fullDayData[log.hour].averageOccupancyRate = log._avg.occupancyRate || 0;
-    });
-
-    return fullDayData;
+  if (avenueIds.length === 0) {
+    return result;
   }
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+  const occupancyLogsAggregated = await this.db.occupancyLog.groupBy({
+    by: ['hour'],
+    where: {
+      parkingAvenueId: { in: avenueIds },
+      timestamp: {
+        gte: startOfDay,
+        lte: endOfDay,
+      },
+    },
+    _avg: {
+      occupancyRate: true,
+    },
+    orderBy: {
+      hour: 'asc',
+    },
+  });
+
+  // Map the aggregated data into our formatted array
+  occupancyLogsAggregated.forEach((log) => {
+    if (result[log.hour]) {
+      // Rounding to nearest whole number as per your "15" example
+      result[log.hour].occupancy = Math.round(log._avg.occupancyRate || 0);
+    }
+  });
+
+  return result;
+}
 
   private generateEmpty24HourArray(): GetTodayOccupancyChartDto {
     return Array.from({ length: 24 }, (_, i) => ({
@@ -542,6 +554,38 @@ async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
     }));
   }
 
+   async findAverageOccupancyByOwner(ownerId: string) {
+    const stats = await this.db.occupancyLog.groupBy({
+      by: ['dayOfWeek'],
+      where: {
+        parkingAvenue: {
+          ownerId: ownerId, // Filters logs for all avenues owned by this person
+        },
+      },
+      _avg: {
+        occupancyRate: true,
+      },
+      orderBy: {
+        dayOfWeek: 'asc',
+      },
+    });
+
+    const daysMap = [
+      'Sun',
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+    ];
+
+    return stats.map((item) => ({
+      day: daysMap[item.dayOfWeek] || 'Unknown',
+      occupancy: Number((item._avg.occupancyRate || 0).toFixed(2)),
+    }));
+  }
+
   async getPeakHours(ownerId: string) {
     const avenueIds = await this.getOwnedAvenueIds(ownerId);
     if (!avenueIds.length) return [];
@@ -562,61 +606,147 @@ async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
     return fullDay;
   }
 
-  async getRevenueTrends(ownerId: string) {
+  async getAverageOccupancyByOwner(ownerId: string) {
+  // 1. Fetch aggregation from the database
+  const stats = await this.db.occupancyLog.groupBy({
+    by: ['hour'],
+    where: {
+      parkingAvenue: {
+        ownerId: ownerId,
+      },
+    },
+    _avg: {
+      occupancyRate: true,
+    },
+    orderBy: {
+      hour: 'asc',
+    },
+  });
+
+  // 2. Format the data to match your required output
+  return stats.map((item) => ({
+    hour: this.formatHour(item.hour),
+    rate: Math.round(item._avg.occupancyRate || 0),
+  }));
+}
+
+// Helper to convert 0-23 integer to "6 AM", "12 PM", etc.
+private formatHour(hour: number): string {
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const formattedHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${formattedHour} ${ampm}`;
+}
+
+ async getMonthlyRevenueTrends(ownerId: string) {
     const avenueIds = await this.getOwnedAvenueIds(ownerId);
     if (!avenueIds.length) return [];
 
-    // Calculate the date 7 days ago
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    // 1. Get the start of the current year
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
 
-    // Fetch all completed check-ins from the last 7 days
-    const recentCheckIns = await this.db.checkIn.findMany({
+    // 2. Fetch all completed check-ins for the owner's avenues this year
+    const checkIns = await this.db.checkIn.findMany({
       where: {
         parkingAvenueId: { in: avenueIds },
         status: 'COMPLETED',
-        createdAt: { gte: sevenDaysAgo }
+        createdAt: { gte: startOfYear },
       },
       select: {
         createdAt: true,
         calculatedAmount: true,
-        reservationId: true
-      }
+        reservationId: true,
+      },
     });
 
-    // Group the data by date string (YYYY-MM-DD) in memory
-    const trendsMap = new Map<string, { resRev: number, walkRev: number }>();
+    // 3. Initialize the 12 months with 0
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    // Create the base structure: [{ month: "Jan", reservations: 0, walkins: 0 }, ...]
+    const monthlyData = monthNames.map(name => ({
+      month: name,
+      reservations: 0,
+      walkins: 0
+    }));
 
-    // Initialize the last 7 days with 0 to ensure the graph doesn't have broken lines
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      trendsMap.set(d.toISOString().split('T')[0], { resRev: 0, walkRev: 0 });
-    }
-
-    // Populate the map with actual revenue
-    recentCheckIns.forEach(checkIn => {
-      const dateStr = checkIn.createdAt.toISOString().split('T')[0];
+    // 4. Aggregate data into the months
+    checkIns.forEach((checkIn) => {
+      const monthIndex = checkIn.createdAt.getMonth(); // 0 for Jan, 1 for Feb...
       const amount = checkIn.calculatedAmount || 0;
-      const data = trendsMap.get(dateStr) || { resRev: 0, walkRev: 0 };
 
       if (checkIn.reservationId) {
-        data.resRev += amount;
+        monthlyData[monthIndex].reservations += amount;
       } else {
-        data.walkRev += amount;
+        monthlyData[monthIndex].walkins += amount;
       }
-      trendsMap.set(dateStr, data);
     });
 
-    // Format for the frontend chart (sorted chronologically)
+    // 5. Final formatting (rounding to 2 decimal places)
+    return monthlyData.map(item => ({
+      ...item,
+      reservations: Number(item.reservations.toFixed(2)),
+      walkins: Number(item.walkins.toFixed(2))
+    }));
+  }
+
+ async getRevenueTrends(ownerId: string) {
+    const avenueIds = await this.getOwnedAvenueIds(ownerId);
+    if (!avenueIds.length) return [];
+
+    // 1. Calculate the date 7 days ago
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 6); // Include today + 6 previous days
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    // 2. Fetch completed check-ins
+    const recentCheckIns = await this.db.checkIn.findMany({
+      where: {
+        parkingAvenueId: { in: avenueIds },
+        status: 'COMPLETED',
+        createdAt: { gte: sevenDaysAgo },
+      },
+      select: {
+        createdAt: true,
+        calculatedAmount: true,
+        reservationId: true,
+      },
+    });
+
+    // 3. Initialize the Map with the last 7 days (ensures no gaps in chart)
+    const trendsMap = new Map<string, { reservations: number; walkins: number }>();
+    
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      // Format as "MMM dd" (e.g., "Oct 24") or "YYYY-MM-DD"
+      const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      trendsMap.set(dateLabel, { reservations: 0, walkins: 0 });
+    }
+
+    // 4. Populate the map with actual revenue
+    recentCheckIns.forEach((checkIn) => {
+      const dateLabel = checkIn.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const amount = checkIn.calculatedAmount || 0;
+      
+      const data = trendsMap.get(dateLabel);
+      if (data) {
+        if (checkIn.reservationId) {
+          data.reservations += amount;
+        } else {
+          data.walkins += amount;
+        }
+      }
+    });
+
+    // 5. Format for the frontend chart and sort by date
+    // We reverse the array because the loop above generates days from Today backwards
     return Array.from(trendsMap.entries())
       .map(([date, revenues]) => ({
-        date,
-        reservationRevenue: revenues.resRev,
-        walkInRevenue: revenues.walkRev
+        date: date,
+        reservations: Number(revenues.reservations.toFixed(2)),
+        walkins: Number(revenues.walkins.toFixed(2)),
       }))
-      .sort((a, b) => a.date.localeCompare(b.date)); // Sort oldest to newest
+      .reverse(); 
   }
 
   private emptyKpis() {
@@ -625,4 +755,92 @@ async getDashboardOverview(ownerId: string): Promise<GetDashboardOverviewDto> {
       visitorSplit: { reservations: 0, walkIns: 0 }
     };
   }
+
+  async getWardenStatusReport(parkingAvenueOwnerId: string) {
+
+    const owner = await this.db.parkingAvenueOwner.findUnique({
+        where: { id: parkingAvenueOwnerId },
+      });
+
+      if (!owner) throw new NotFoundException('Only parking avenue owner is allowed');
+
+      const wardenStats = await this.db.warden.groupBy({
+        by: ['wardenStatus'],
+        _count: {
+          id: true,
+        },
+        where: {
+          parkingAvenue: {
+            ownerId: parkingAvenueOwnerId,
+          },
+        },
+      });
+
+      const result = {
+        onDuty: 0,
+        offDuty: 0,
+      };
+
+      wardenStats.forEach((stat) => {
+        if (stat.wardenStatus === WardenStatus.ONDUTY) {
+          result.onDuty = stat._count.id;
+        } else if (stat.wardenStatus === WardenStatus.OFFDUTY) {
+          result.offDuty = stat._count.id;
+        }
+      });
+
+      return result;
+    }
+
+
+    async getPeakDemandData(ownerId: string) {
+      
+      const myAvenues = await this.db.parkingAvenue.findMany({
+        where: { ownerId },
+        select: { id: true },
+      });
+
+      const avenueIds = myAvenues.map((a) => a.id);
+
+      if (avenueIds.length === 0) {
+        return []; 
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const reservations = await this.db.reservation.findMany({
+        where: {
+          createdAt: { gte: today },
+          status: { not: 'CANCELLED' },
+          parkingAvenueId: { in: avenueIds }, 
+        },
+        select: {
+          startTime: true,
+        },
+      });
+
+      const demandMap: Record<number, number> = {};
+      for (let i = 6; i <= 22; i++) {
+        demandMap[i] = 0;
+      }
+
+      reservations.forEach((res) => {
+        const hour = res.startTime.getHours();
+        if (demandMap.hasOwnProperty(hour)) {
+          demandMap[hour]++;
+        }
+      });
+
+      return Object.entries(demandMap).map(([hour, count]) => ({
+        time: this.formatHourLabel(parseInt(hour)),
+        reservations: count,
+      }));
+    }
+
+    private formatHourLabel(hour: number): string {
+      if (hour === 12) return '12PM';
+      if (hour === 0) return '12AM';
+      return hour > 12 ? `${hour - 12}PM` : `${hour}AM`;
+    }
 }

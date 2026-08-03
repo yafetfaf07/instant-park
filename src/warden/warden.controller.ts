@@ -52,6 +52,15 @@ export class WardenController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  @ApiOperation({ summary: 'Logout a warden' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({ status: 200, description: 'Logout successful' })
+  logout(@Req() req: RequestWithUser) {
+    return this.wardenService.logout(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'Get list of wardens of a given parking avenue' })
   @ApiBearerAuth('JWT-auth')

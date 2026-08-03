@@ -21,6 +21,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateParkingAvenueOwnerByAdminDto } from 'src/parking-avenue-owner/dto/create-parking-avenue-owner-by-admin.dto';
 import { CreateParkingAvenueByAdminDto } from 'src/parking-avenue/dto/create-parking-avenue-by-admin.dto';
 import { ParkingAvenueService } from 'src/parking-avenue/parking-avenue.service';
+import { AdminKpiDto, DetailedAnalyticsDto, WeeklyUtilizationDto } from './dto/dashboard.dto';
+import { AiInsightService } from 'src/ai-analytics/ai-insight.service';
 import { WardenService } from 'src/warden/warden.service';
 
 
@@ -41,6 +43,7 @@ export class AdminController {
     private readonly eventEmitter: EventEmitter2,
     private readonly parkingAvenueService: ParkingAvenueService,
     private readonly parkingAvenueOwnerService: ParkingAvenueOwnerService,
+    private readonly aiInsightService: AiInsightService,
     private readonly wardenService: WardenService
   ) {}
 
@@ -250,6 +253,20 @@ export class AdminController {
     }
   }
 
+  @Get('kpis')
+  async getKpis(): Promise<AdminKpiDto> {
+    return this.adminService.getDashboardKpis();
+  }
+
+  @Get('weekly-utilization')
+  async getWeeklyUtilization(): Promise<WeeklyUtilizationDto[]> {
+    return this.adminService.getWeeklyUtilizationTrend();
+  }
+
+  @Get('ai-insight')
+  async getSystemAiInsight() {
+    return this.aiInsightService.generateAdminInsight();
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('list-wardens')
@@ -260,4 +277,25 @@ export class AdminController {
     return this.wardenService.getWardenStats(req.user.id, this.parseCursor(cursor))
   }
 
+  @Get('detailed-analytics')
+  async getDetailedAnalytics(): Promise<DetailedAnalyticsDto> {
+    return this.adminService.getDetailedAnalytics();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('reservation-dashboard')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'get reservation dashboard'})
+  getReservationDashboard(@Req() req: RequestWithUser){
+    return this.adminService.getReservationDashboard(req.user.id)
+  }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Get('reservation-peak-demand')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'get reservation peak demand graph for admin'})
+  getPeakDemandData(@Req() req: RequestWithUser){
+    return this.adminService.getPeakDemandData(req.user.id)
+  }
 }

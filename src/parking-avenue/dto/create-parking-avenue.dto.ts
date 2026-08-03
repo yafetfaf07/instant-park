@@ -97,6 +97,12 @@ export class CreateParkingAvenueDto {
   legalDoc: string
 
   @ApiProperty({
+    format: 'binary'
+  })
+  @Allow()
+  photosUrl: string
+
+  @ApiProperty({
     description: 'Subcity parking avenue is located in',
     enum: SUBCITY,
     example: SUBCITY.BOLE,

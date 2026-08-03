@@ -29,6 +29,10 @@ model Customer {
   reservations   Reservation[]
   checkIns       CheckIn[]
   incidentReport IncidentReport[]
+
+  reviews Review[]
+
+  favorites Favorite[]
 }
 
 enum Gender {
@@ -66,6 +70,10 @@ model ParkingAvenue {
 
   endLatitude    Float? // Optional, for ON_STREET range
   endLongitude   Float? // Optional, for ON_STREET range
+
+  reviews Review[]
+
+  favorites Favorite[]
 }
 
 enum SUBCITY {
@@ -262,4 +270,35 @@ enum ReportCategory {
   THEFT
   PARKINGSPACETAKEN
   OTHER
+}
+
+model Review {
+  id              String        @id @default(uuid())
+  rating          Int          
+  comment         String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id], onDelete: Cascade)
+
+  // Enforces that a customer can only leave one review per avenue
+  @@unique([customerId, parkingAvenueId]) 
+}
+
+model Favorite {
+  id              String        @id @default(uuid())
+  createdAt       DateTime      @default(now())
+
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  parkingAvenueId String
+  parkingAvenue   ParkingAvenue @relation(fields: [parkingAvenueId], references: [id], onDelete: Cascade)
+
+  // Enforces that a customer cannot favorite the same avenue twice
+  @@unique([customerId, parkingAvenueId]) 
 }

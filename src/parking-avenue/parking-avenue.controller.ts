@@ -18,6 +18,8 @@ import * as fs from 'fs';
 import { CreateParkingAvenueImageDto } from './dto/create-parking-avenue-image.dto';
 import { ParkingAvenueType } from '@prisma/client';
 import { FilterParkingDto } from './dto/filter-parking.dto';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UploadedFiles } from '@nestjs/common';
 
 
 const diskStorageConfig = diskStorage({
@@ -33,17 +35,20 @@ const diskStorageConfig = diskStorage({
 export class ParkingAvenueController {
   constructor(private readonly parkingAvenueService: ParkingAvenueService) { }
 
-    private cleanupFiles(legalDoc: string) {
-   
-      if (legalDoc && fs.existsSync(legalDoc)) {
-        fs.unlinkSync(legalDoc);
-      }
+  private cleanupFiles(legalDoc: string) {
+
+    if (legalDoc && fs.existsSync(legalDoc)) {
+      fs.unlinkSync(legalDoc);
+    }
   }
 
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  @UseInterceptors(FileInterceptor('legalDoc', { storage: diskStorageConfig }))
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'legalDoc', maxCount: 1 },
+    { name: 'photosUrl', maxCount: 1 },
+  ], { storage: diskStorageConfig }))
   @ApiOperation({ summary: 'Register a new parking avenue' })
   @ApiBody({ type: CreateParkingAvenueDto })
   @ApiConsumes('multipart/form-data')
@@ -53,46 +58,68 @@ export class ParkingAvenueController {
   @ApiBearerAuth('JWT-auth')
   create(
     @Body() createParkingAvenueDto: CreateParkingAvenueDto,
-    @UploadedFile() legalDoc: Express.Multer.File, 
+    @UploadedFiles() files: { legalDoc?: Express.Multer.File[], photosUrl?: Express.Multer.File[] },
     @Req() req: RequestWithUser
   ) {
-      if (!legalDoc) {
-        throw new BadRequestException('legalDoc is required');
-      }
+
+    const legalDoc = files.legalDoc?.[0];
+    const photosUrl = files.photosUrl?.[0];
+
+    if (!legalDoc) {
+      throw new BadRequestException('legalDoc is required');
+    }
 
 
 
-      if (legalDoc && legalDoc.size > 2 * 1024 * 1024) {
-        this.cleanupFiles(legalDoc.path);
-        throw new BadRequestException('Image must be smaller than 2MB');
-      }
+    if (legalDoc && legalDoc.size > 2 * 1024 * 1024) {
+      this.cleanupFiles(legalDoc.path);
+      throw new BadRequestException('Legal doc must be smaller than 2MB');
+    }
 
-      if (!legalDoc.mimetype.match(/image\/(jpg|jpeg|png)/)) {
+    if (photosUrl && photosUrl.size > 2 * 1024 * 1024) {
+      this.cleanupFiles(legalDoc.path);
+      throw new BadRequestException('Image must be smaller than 2MB');
+    }
+
+    if (!legalDoc.mimetype.match(/image\/(jpg|jpeg|png)/)) {
+      this.cleanupFiles(legalDoc.path);
+      throw new BadRequestException(
+        'Only image files (jpg, png, jpeg) are allowed',
+      );
+    }
+
+    if (photosUrl) {
+
+      if (!photosUrl.mimetype.match(/image\/(jpg|jpeg|png)/)) {
         this.cleanupFiles(legalDoc.path);
         throw new BadRequestException(
           'Only image files (jpg, png, jpeg) are allowed',
         );
       }
+    }
 
-      createParkingAvenueDto.legalDoc = legalDoc.path;
 
-      try{
-       
-        return this.parkingAvenueService.create(createParkingAvenueDto, req.user.id);
-      } 
-      catch(error){
-        this.cleanupFiles(legalDoc.path);
-        throw error;
+    createParkingAvenueDto.legalDoc = legalDoc.path;
+
+    try {
+      if (photosUrl) {
+        return this.parkingAvenueService.create(createParkingAvenueDto, req.user.id, photosUrl.path);
       }
-      
+      return this.parkingAvenueService.create(createParkingAvenueDto, req.user.id);
+    }
+    catch (error) {
+      this.cleanupFiles(legalDoc.path);
+      throw error;
+    }
+
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('list')
   @ApiOperation({ summary: 'Get all the parking avenue you own' })
   @ApiBearerAuth('JWT-auth')
-  @ApiQuery({ name: 'cursor', required: false, type: String }) 
-  getMyParkingAvenueList( @Req() req: RequestWithUser, @Query('cursor') cursor?: string){
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  getMyParkingAvenueList(@Req() req: RequestWithUser, @Query('cursor') cursor?: string) {
     return this.parkingAvenueService.getMyParkingAvenueList(req.user.id, cursor);
   }
 
@@ -100,7 +127,7 @@ export class ParkingAvenueController {
   @Get('detail')
   @ApiOperation({ summary: 'Get a detail of a single parking avenue you own' })
   @ApiBearerAuth('JWT-auth')
-  getMyParkingAvenueDetail(@Query() getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, @Req() req: RequestWithUser){
+  getMyParkingAvenueDetail(@Query() getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, @Req() req: RequestWithUser) {
     return this.parkingAvenueService.getMyParkingAvenueDetail(req.user.id, getMyParkingAvenueDetailDto.id);
   }
 
@@ -108,7 +135,7 @@ export class ParkingAvenueController {
   @Get('getParkingAvenueImages')
   @ApiOperation({ summary: 'Get all images of single parking avenue you own' })
   @ApiBearerAuth('JWT-auth')
-  getMyParkingAvenueImages(@Query() getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, @Req() req: RequestWithUser){
+  getMyParkingAvenueImages(@Query() getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, @Req() req: RequestWithUser) {
     return this.parkingAvenueService.getMyParkingAvenueImages(getMyParkingAvenueDetailDto, req.user.id)
   }
 
@@ -128,7 +155,7 @@ export class ParkingAvenueController {
 
   @ApiOperation({ summary: 'Get parking avenue by name' })
   @Get('name')
-  getParkingAvenueByName(@Query() getNameParkingAvenueDto: GetNameParkingAvenueDto){
+  getParkingAvenueByName(@Query() getNameParkingAvenueDto: GetNameParkingAvenueDto) {
     return this.parkingAvenueService.getParkingAvenueByName(getNameParkingAvenueDto);
   }
 
@@ -142,9 +169,9 @@ export class ParkingAvenueController {
     return this.parkingAvenueService.createReservation(createReservationDto, req.user.id);
   }
 
-  //@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('reservations/avenue/:id')
-  //@ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get paginated reservations for a parking lot' })
   @ApiResponse({ status: 200, description: 'List of reservations with pagination meta' })
   async getReservationsByAvenue(
@@ -152,9 +179,7 @@ export class ParkingAvenueController {
     @Query() query: GetReservationsDto,
     @Req() req: RequestWithUser
   ) {
-    // TODO: we need to make sure only a warden assigned to the provided parking avenue can access this information
-
-return this.parkingAvenueService.getReservationsByAvenue(id, query, req.user.id);
+    return this.parkingAvenueService.getReservationsByAvenue(id, query, req.user.id);
   }
 
   //@UseGuards(JwtAuthGuard)
@@ -176,6 +201,7 @@ return this.parkingAvenueService.getReservationsByAvenue(id, query, req.user.id)
   }
 
   @Get('check-ins/:id')
+  @ApiOperation({ summary: 'get list of checked in users from parking avenue' })
   async getAvenueCheckIns(@Param('id') parkingAvenueId: string, @Query() query: GetCheckInsDto,) {
     return this.parkingAvenueService.getAvenueCheckIns(parkingAvenueId, query);
   }
@@ -185,49 +211,23 @@ return this.parkingAvenueService.getReservationsByAvenue(id, query, req.user.id)
   @ApiBody({ type: UpdateParkingAvenueDto })
   @ApiOperation({ summary: 'update parking Avenue' })
   @ApiBearerAuth('JWT-auth')
-  @UseInterceptors(FileInterceptor('photoUrl', { storage: diskStorageConfig }))
   @Patch(':id')
   update(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body() updateParkingAvenueDto: UpdateParkingAvenueDto,
-    @UploadedFile() legalDoc: Express.Multer.File,  
     @Req() req: RequestWithUser
-  ){
-      const cleanupNewFiles = () => {
-        if (legalDoc?.path && fs.existsSync(legalDoc.path))
-          fs.unlinkSync(legalDoc.path);
-      };
+  ) {
+      
+      return this.parkingAvenueService.update(id, updateParkingAvenueDto, req.user.id);
 
-      if (legalDoc) {
-        if (legalDoc.size > 2 * 1024 * 1024) {
-          cleanupNewFiles();
-          throw new BadRequestException('Image must be smaller than 2MB');
-        }
-        if (!legalDoc.mimetype.match(/image\/(jpg|jpeg|png)/)) {
-          cleanupNewFiles();
-          throw new BadRequestException('Invalid image format');
-        }
-
-        updateParkingAvenueDto.legalDoc = legalDoc.path;
-      }
-
-
-
-      try{
-        return this.parkingAvenueService.update(id, updateParkingAvenueDto, req.user.id);
-
-      } catch(error){
-        cleanupNewFiles();
-        throw error;
-      }
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  @HttpCode(204) 
+  @HttpCode(204)
   @ApiOperation({ summary: 'Delete a parking avenue using id' })
   @ApiBearerAuth('JWT-auth')
-  remove(@Param('id') id: string, @Req() req: RequestWithUser){
+  remove(@Param('id') id: string, @Req() req: RequestWithUser) {
     return this.parkingAvenueService.remove(id, req.user.id);
   }
 
@@ -243,41 +243,41 @@ return this.parkingAvenueService.getReservationsByAvenue(id, query, req.user.id)
     @Body() createParkingAvenueImageDto: CreateParkingAvenueImageDto,
     @UploadedFile() photosUrl: Express.Multer.File,
     @Req() req: RequestWithUser
-  ){
+  ) {
     if (!photosUrl) {
-        throw new BadRequestException('legalDoc is required');
-      }
+      throw new BadRequestException('legalDoc is required');
+    }
 
     if (photosUrl && photosUrl.size > 2 * 1024 * 1024) {
-        this.cleanupFiles(photosUrl.path);
-        throw new BadRequestException('Image must be smaller than 2MB');
-      }
+      this.cleanupFiles(photosUrl.path);
+      throw new BadRequestException('Image must be smaller than 2MB');
+    }
 
     if (!photosUrl.mimetype.match(/image\/(jpg|jpeg|png)/)) {
-        this.cleanupFiles(photosUrl.path);
-        throw new BadRequestException(
-          'Only image files (jpg, png, jpeg) are allowed',
-        );
+      this.cleanupFiles(photosUrl.path);
+      throw new BadRequestException(
+        'Only image files (jpg, png, jpeg) are allowed',
+      );
     }
 
     createParkingAvenueImageDto.photosUrl = photosUrl.path;
 
-    try{
+    try {
       return this.parkingAvenueService.addImage(createParkingAvenueImageDto, req.user.id)
-      
-    } catch(error){
+
+    } catch (error) {
       this.cleanupFiles(photosUrl.path)
       throw error;
     }
 
   }
-  
+
   @Get('list/optionalfiter')
   @ApiOperation({ summary: 'Get all parking avenues with optional filtering by type' })
   @ApiQuery({ name: 'type', enum: ParkingAvenueType, required: false })
   @ApiBearerAuth('JWT-auth')
   async findAll(@Query() filterDto: FilterParkingDto) {
-  return this.parkingAvenueService.findAll(filterDto);
+    return this.parkingAvenueService.findAll(filterDto);
   }
 
 

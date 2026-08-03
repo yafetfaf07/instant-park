@@ -17,6 +17,7 @@ import { GetDashboardOverviewDto } from './dto/get-dashboard-overview.dto';
 import { GetTodayOccupancyChartDto } from './dto/get-today-occupancy-chart.dto';
 import { ResendCredentialsDto } from './dto/resend-credentials-dto';
 import { AnalyticsKpiDto, ChartDataPointDto, RevenueTrendDto } from './dto/analytics.dto';
+import { AiInsightService } from 'src/ai-analytics/ai-insight.service';
 
 const diskStorageConfig = diskStorage({
   destination: 'uploads',
@@ -29,65 +30,65 @@ const diskStorageConfig = diskStorage({
 
 @Controller('parking-avenue-owner')
 export class ParkingAvenueOwnerController {
-  constructor(private readonly parkingAvenueOwnerService: ParkingAvenueOwnerService) {}
-    
-    private cleanupFiles(personalId: string) {
-      
-        if (personalId && fs.existsSync(personalId)) {
-          fs.unlinkSync(personalId);
-        }
+  constructor(private readonly parkingAvenueOwnerService: ParkingAvenueOwnerService, private readonly aiInsightService: AiInsightService) { }
+
+  private cleanupFiles(personalId: string) {
+
+    if (personalId && fs.existsSync(personalId)) {
+      fs.unlinkSync(personalId);
     }
-    
-    @Post('register')
-    @UseInterceptors(FileInterceptor('personalId', { storage: diskStorageConfig }))
-    @ApiOperation({ summary: 'Register a new parking avenue owner' })
-    @ApiBody({ type: CreateParkingAvenueOwnerDto })
-    @ApiConsumes('multipart/form-data')
-    @ApiResponse({ status: 201, description: 'Parking avenue owner registered successfully' })
-    @ApiResponse({ status: 400, description: 'Bad request' })
-    @ApiResponse({ status: 409, description: 'Conflict, parking avenue owner already exists' })
-    register(
-      @Body() createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto,
-      @UploadedFile() personalId: Express.Multer.File,
-    ) {
-      if (!personalId) {
-        throw new BadRequestException('personalId is required');
-      }
+  }
 
-      if (personalId && personalId.size > 2 * 1024 * 1024) {
-        this.cleanupFiles(personalId.path);
-        throw new BadRequestException('Image must be smaller than 2MB');
-      }
-
-      if (!personalId.mimetype.match(/image\/(jpg|jpeg|png)/)) {
-        this.cleanupFiles(personalId.path);
-        throw new BadRequestException(
-          'Only image files (jpg, png, jpeg) are allowed',
-        );
-      }
-
-      createParkingAvenueOwnerDto.personalId = personalId.path;
-      
-      try{
-        return this.parkingAvenueOwnerService.register(createParkingAvenueOwnerDto);
-
-      } catch(error){
-        this.cleanupFiles(personalId.path);
-        throw error;
-      }
+  @Post('register')
+  @UseInterceptors(FileInterceptor('personalId', { storage: diskStorageConfig }))
+  @ApiOperation({ summary: 'Register a new parking avenue owner' })
+  @ApiBody({ type: CreateParkingAvenueOwnerDto })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Parking avenue owner registered successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 409, description: 'Conflict, parking avenue owner already exists' })
+  register(
+    @Body() createParkingAvenueOwnerDto: CreateParkingAvenueOwnerDto,
+    @UploadedFile() personalId: Express.Multer.File,
+  ) {
+    if (!personalId) {
+      throw new BadRequestException('personalId is required');
     }
-  
-    @Post('login')
-    @ApiOperation({ summary: 'Login parking avenue owner' })
-    @ApiBody({ type: LoginParkingAvenueOwnerDto })
-    @ApiResponse({
-      status: 200,
-      description: 'Login successful, returns JWT token',
-    })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
-    login(@Body() updateParkingAvenueOwnerDto: UpdateParkingAvenueOwnerDto) {
-      return this.parkingAvenueOwnerService.login(updateParkingAvenueOwnerDto);
+
+    if (personalId && personalId.size > 2 * 1024 * 1024) {
+      this.cleanupFiles(personalId.path);
+      throw new BadRequestException('Image must be smaller than 2MB');
     }
+
+    if (!personalId.mimetype.match(/image\/(jpg|jpeg|png)/)) {
+      this.cleanupFiles(personalId.path);
+      throw new BadRequestException(
+        'Only image files (jpg, png, jpeg) are allowed',
+      );
+    }
+
+    createParkingAvenueOwnerDto.personalId = personalId.path;
+
+    try {
+      return this.parkingAvenueOwnerService.register(createParkingAvenueOwnerDto);
+
+    } catch (error) {
+      this.cleanupFiles(personalId.path);
+      throw error;
+    }
+  }
+
+  @Post('login')
+  @ApiOperation({ summary: 'Login parking avenue owner' })
+  @ApiBody({ type: LoginParkingAvenueOwnerDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful, returns JWT token',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  login(@Body() updateParkingAvenueOwnerDto: UpdateParkingAvenueOwnerDto) {
+    return this.parkingAvenueOwnerService.login(updateParkingAvenueOwnerDto);
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -100,101 +101,145 @@ export class ParkingAvenueOwnerController {
     return this.parkingAvenueOwnerService.getProfile(id);
   }
 
-@Sse('live-activity')
-  async streamLiveActivities(@Query('ownerId') ownerId: string): Promise<Observable<MessageEvent>> {
-    return this.parkingAvenueOwnerService.getLiveActivityStream(ownerId);
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Sse('live-activity')
+  async streamLiveActivities(@Req() req: RequestWithUser): Promise<Observable<MessageEvent>> {
+    return this.parkingAvenueOwnerService.getLiveActivityStream(req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('dashboard/overview')
-  async getDashboardOverview(@Query('ownerId') ownerId: string): Promise<GetDashboardOverviewDto> {
-    return this.parkingAvenueOwnerService.getDashboardOverview(ownerId);
+  async getDashboardOverview(@Req() req: RequestWithUser): Promise<GetDashboardOverviewDto> {
+    return this.parkingAvenueOwnerService.getDashboardOverview(req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('dashboard/today-occupancy-chart')
-  async getTodayOccupancyChartData(@Query('ownerId') ownerId: string): Promise<GetTodayOccupancyChartDto> {
-    return this.parkingAvenueOwnerService.getTodayOccupancyChartData(ownerId);
+  async getTodayOccupancyChartData(@Req() req: RequestWithUser): Promise<GetTodayOccupancyChartDto> {
+    return this.parkingAvenueOwnerService.getTodayOccupancyChartData(req.user.id);
   }
 
   @Post('forgot-password')
   @ApiBody({ type: ForgotPasswordDto })
-  forgotPassword(@Body() forgotPasswordDto : ForgotPasswordDto){
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.parkingAvenueOwnerService.forgotPassword(forgotPasswordDto.email)
   }
 
   @Post('reset-password')
   @ApiBody({ type: ResetPasswordDto })
-    resetPassword(@Body() resetPasswordDto: ResetPasswordDto){
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.parkingAvenueOwnerService.resetPassword(resetPasswordDto.email, resetPasswordDto.token, resetPasswordDto.newPassword)
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('wardens')
   @ApiOperation({ summary: 'Get list of all wardens for all my parking avenues' })
-  @ApiQuery({ name: 'cursor', required: false, type: String }) 
+  @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiBearerAuth('JWT-auth')
   async getMyWardens(@Req() req: RequestWithUser, @Query('cursor') cursor?: string,) {
     return this.parkingAvenueOwnerService.getWardensForOwner(req.user.id);
   }
 
-    @Post('resend-credentials')
-    @ApiBody({ type: ResendCredentialsDto })
-    @ApiOperation({ summary: 'Resend login credentials for new accounts' })
-    async resendCredentials(@Body('email') email: string) {
-      return this.parkingAvenueOwnerService.resendCredentials(email);
+  @Post('resend-credentials')
+  @ApiBody({ type: ResendCredentialsDto })
+  @ApiOperation({ summary: 'Resend login credentials for new accounts' })
+  async resendCredentials(@Body('email') email: string) {
+    return this.parkingAvenueOwnerService.resendCredentials(email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('update/parking-avenue-owner')
+  @ApiOperation({ summary: 'Update parking avenue owner profile' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBearerAuth('JWT-auth')
+  @UseInterceptors(FileInterceptor('personalId', { storage: diskStorageConfig }))
+  async updateProfile(
+    @Req() req: RequestWithUser,
+    @Body() dto: UpdateParkingAvenueOwnerDto,
+    @UploadedFile() personalId: Express.Multer.File,
+
+  ) {
+
+    if (personalId) {
+      if (personalId.size > 2 * 1024 * 1024) {
+        this.cleanupFiles(personalId.path);
+        throw new BadRequestException('Image must be smaller than 2MB');
+      }
+      if (!personalId.mimetype.match(/image\/(jpg|jpeg|png)/)) {
+        this.cleanupFiles(personalId.path);
+        throw new BadRequestException('Only image files (jpg, png, jpeg) are allowed');
+      }
+      dto.personalId = personalId.path;
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Patch('update/parking-avenue-owner')
-    @ApiOperation({ summary: 'Update parking avenue owner profile' })
-    @ApiConsumes('multipart/form-data')
-    @ApiBearerAuth('JWT-auth')
-    @UseInterceptors(FileInterceptor('personalId', { storage: diskStorageConfig }))
-    async updateProfile(
-      @Req() req: RequestWithUser,
-      @Body() dto: UpdateParkingAvenueOwnerDto,
-      @UploadedFile() personalId: Express.Multer.File,
-
-    ) {
-
-         if (personalId) {
-            if (personalId.size > 2 * 1024 * 1024) {
-              this.cleanupFiles(personalId.path);
-              throw new BadRequestException('Image must be smaller than 2MB');
-            }
-            if (!personalId.mimetype.match(/image\/(jpg|jpeg|png)/)) {
-              this.cleanupFiles(personalId.path);
-              throw new BadRequestException('Only image files (jpg, png, jpeg) are allowed');
-            }
-            dto.personalId = personalId.path;
-          }
-
-          try {
-              return await this.parkingAvenueOwnerService.updateProfile(req.user.id, dto);
-            } 
-          catch (error) {
-            if (personalId) this.cleanupFiles(personalId.path);
-            throw error;
-          }
-
+    try {
+      return await this.parkingAvenueOwnerService.updateProfile(req.user.id, dto);
+    }
+    catch (error) {
+      if (personalId) this.cleanupFiles(personalId.path);
+      throw error;
     }
 
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('kpis')
-  async getKpis(@Query('ownerId') ownerId: string): Promise<AnalyticsKpiDto> {
-    return this.parkingAvenueOwnerService.getAnalyticsKpis(ownerId);
+  async getKpis(@Req() req: RequestWithUser): Promise<AnalyticsKpiDto> {
+    return this.parkingAvenueOwnerService.getAnalyticsKpis(req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('occupancy-by-day')
-  async getOccupancyByDay(@Query('ownerId') ownerId: string): Promise<ChartDataPointDto[]> {
-    return this.parkingAvenueOwnerService.getOccupancyByDay(ownerId);
+  async getOccupancyByDay(@Req() req: RequestWithUser) {
+    // return this.parkingAvenueOwnerService.getOccupancyByDay(req.user.id);
+    return this.parkingAvenueOwnerService.findAverageOccupancyByOwner(req.user.id);
+    
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('peak-hours')
-  async getPeakHours(@Query('ownerId') ownerId: string): Promise<ChartDataPointDto[]> {
-    return this.parkingAvenueOwnerService.getPeakHours(ownerId);
+  async getPeakHours(@Req() req: RequestWithUser) {
+    // return this.parkingAvenueOwnerService.getPeakHours(req.user.id);
+    
+    return this.parkingAvenueOwnerService.getAverageOccupancyByOwner(req.user.id);
+
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('revenue-trends')
-  async getRevenueTrends(@Query('ownerId') ownerId: string): Promise<RevenueTrendDto[]> {
-    return this.parkingAvenueOwnerService.getRevenueTrends(ownerId);
+  async getRevenueTrends(@Req() req: RequestWithUser){
+    // return this.parkingAvenueOwnerService.getRevenueTrends(req.user.id);
+    return this.parkingAvenueOwnerService.getMonthlyRevenueTrends(req.user.id);
+    
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @Get('ai-insight')
+  async getAiInsight(@Req() req: RequestWithUser) {
+    return this.aiInsightService.generateProviderInsight(req.user.id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('warden-status')
+  @ApiOperation({ summary: 'Get list of wardens by status' })
+  @ApiBearerAuth('JWT-auth')
+  async getWardenStatusReport(@Req() req: RequestWithUser) {
+    return this.parkingAvenueOwnerService.getWardenStatusReport(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard) 
+  @Get('owner/reservation-peak-demand')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'get reservation peak demand for owner' })
+  getOwnerPeakDemandData(@Req() req: RequestWithUser) {
+    return this.parkingAvenueOwnerService.getPeakDemandData(req.user.id);
+  }
+}

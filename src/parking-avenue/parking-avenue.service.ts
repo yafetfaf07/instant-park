@@ -31,18 +31,18 @@ export class ParkingAvenueService {
   ) { }
 
   paginate(items: any[]) {
-      const hasMore = items.length > PAGE_SIZE;
-      const data = hasMore ? items.slice(0, PAGE_SIZE) : items;
-      const nextCursor = hasMore
-        ? data[data.length - 1].id
-        : null;
+    const hasMore = items.length > PAGE_SIZE;
+    const data = hasMore ? items.slice(0, PAGE_SIZE) : items;
+    const nextCursor = hasMore
+      ? data[data.length - 1].id
+      : null;
 
-        return { data, hasMore, nextCursor };
-    }
+    return { data, hasMore, nextCursor };
+  }
 
   private readonly AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
-  async create(createParkingAvenueDto: CreateParkingAvenueDto, userId: string) {
+  async create(createParkingAvenueDto: CreateParkingAvenueDto, userId: string, imagePath?: string) {
     const parkingAvenueOwnerCheck =
       await this.databaseService.parkingAvenueOwner.findUnique({
         where: { id: userId },
@@ -61,24 +61,38 @@ export class ParkingAvenueService {
     const existingParkingAvenueCheck = await this.databaseService.parkingAvenue.findFirst({
       where: {
         OR: [
-          {name: createParkingAvenueDto.name},
-          {address: createParkingAvenueDto.address}
+          { name: createParkingAvenueDto.name },
+          { address: createParkingAvenueDto.address }
         ]
       }
     })
 
-    if(existingParkingAvenueCheck){
-      if(existingParkingAvenueCheck.name === createParkingAvenueDto.name){
+    if (existingParkingAvenueCheck) {
+      if (existingParkingAvenueCheck.name === createParkingAvenueDto.name) {
         throw new ConflictException('This is name is already taken')
       }
-      if(existingParkingAvenueCheck.address === createParkingAvenueDto.address){
+      if (existingParkingAvenueCheck.address === createParkingAvenueDto.address) {
         throw new ConflictException('This address is already taken')
       }
     }
 
-    return this.databaseService.parkingAvenue.create({
+    const createAvenue = await this.databaseService.parkingAvenue.create({
       data: { ...createParkingAvenueDto, ownerId: userId },
     });
+
+    if (imagePath) {
+      await this.databaseService.parkingAvenueImage.create(
+        {
+          data: {
+            parkingAvenueId: createAvenue.id,
+            photosUrl: imagePath
+          }
+        }
+      )
+    }
+
+
+    return createAvenue
   }
 
   async findNearby(searchDto: SearchParkingDto) {
@@ -86,7 +100,7 @@ export class ParkingAvenueService {
 
     // 6371 is the radius of the Earth in km
     const results = await this.databaseService.$queryRaw<ParkingAvenue[]>`
-        SELECT id, name, address, latitude, longitude, status, "hourlyRate",
+        SELECT id, name, address, latitude, longitude, status, type, "endLatitude", "endLongitude","hourlyRate",
         (
           6371 * acos(
             cos(radians(${latitude})) * cos(radians(latitude)) * cos(radians(longitude) - radians(${longitude})) +
@@ -106,7 +120,7 @@ export class ParkingAvenueService {
     return results;
   }
 
-  async getParkingAvenueDetail(parkingAvenueId: string, eta: number){
+  async getParkingAvenueDetail(parkingAvenueId: string, eta: number) {
     const parkingAvenue = await this.databaseService.parkingAvenue.findFirst(
       {
         where: {
@@ -125,12 +139,12 @@ export class ParkingAvenueService {
       }
     );
 
-    if(!parkingAvenue){
+    if (!parkingAvenue) {
       throw new NotFoundException("You do not have any parking avenues");
     }
 
     interface PredictionResponse {
-      predicted_occupancy_rate: number; 
+      predicted_occupancy_rate: number;
       confidence_score: number;
     }
 
@@ -166,7 +180,7 @@ export class ParkingAvenueService {
         status: 'PENDING',
       },
     });
-  
+
     if (existingPending) {
       throw new ConflictException('You already have a pending reservation for this avenue.');
     }
@@ -324,9 +338,10 @@ export class ParkingAvenueService {
           totalPrice: true,
           qrCode: true,
           status: true,
-          parkingAvenue: { 
-            select: { 
-              name: true, 
+          parkingAvenue: {
+            select: {
+              id: true,
+              name: true,
               parkingAvenueImage: {
                 select: {
                   photosUrl: true,
@@ -354,46 +369,46 @@ export class ParkingAvenueService {
     };
   }
 
-async verifyPayment(bookingRef: string) {
-  const reservation = await this.databaseService.reservation.findUnique({
-    where: { bookingRef: bookingRef },
-  });
+  async verifyPayment(bookingRef: string) {
+    const reservation = await this.databaseService.reservation.findUnique({
+      where: { bookingRef: bookingRef },
+    });
 
-  if (!reservation) {
-    this.logger.error(`Reservation with ref ${bookingRef} not found`);
-    throw new NotFoundException('Reservation not found');
-  }
-
-  // Prevent Double Check-ins
-  if (reservation.status === 'FULFILLED') {
-    throw new ConflictException('This reservation has already been used for check-in.');
-  }
-
-  if (reservation.status === 'CONFIRMED') {
-    let dto = new CreateCheckInDto();
-    dto.licensePlate = reservation.plateNumber;
-    dto.parkingAvenueId = reservation.parkingAvenueId;
-    dto.userId = reservation.userId;
-    dto.reservationId = reservation.id;
-    
-    try {
-      await this.checkInService.create(dto);
-
-      await this.databaseService.reservation.update({
-        where: { id: reservation.id },
-        data: { status: 'FULFILLED' }
-      });
-
-      return { message: 'Reservation confirmed and vehicle checked in successfully.' };
-
-    } catch (error) {
-      this.logger.error(`Failed to auto check-in reservation ${bookingRef}`, error.stack);
-      throw new InternalServerErrorException('Reservation is confirmed, but automatic check-in failed. Please check-in manually.');
+    if (!reservation) {
+      this.logger.error(`Reservation with ref ${bookingRef} not found`);
+      throw new NotFoundException('Reservation not found');
     }
-  }
 
-  return { message: 'Reservation not confirmed yet.' };
-}
+    // Prevent Double Check-ins
+    if (reservation.status === 'FULFILLED') {
+      throw new ConflictException('This reservation has already been used for check-in.');
+    }
+
+    if (reservation.status === 'CONFIRMED') {
+      let dto = new CreateCheckInDto();
+      dto.licensePlate = reservation.plateNumber;
+      dto.parkingAvenueId = reservation.parkingAvenueId;
+      dto.userId = reservation.userId;
+      dto.reservationId = reservation.id;
+
+      try {
+        await this.checkInService.create(dto);
+
+        await this.databaseService.reservation.update({
+          where: { id: reservation.id },
+          data: { status: 'FULFILLED' }
+        });
+
+        return { message: 'Reservation confirmed and vehicle checked in successfully.' };
+
+      } catch (error) {
+        this.logger.error(`Failed to auto check-in reservation ${bookingRef}`, error.stack);
+        throw new InternalServerErrorException('Reservation is confirmed, but automatic check-in failed. Please check-in manually.');
+      }
+    }
+
+    return { message: 'Reservation not confirmed yet.' };
+  }
 
   async getAvenueCheckIns(parkingAvenueId: string, dto: GetCheckInsDto) {
     const { page = 1, limit = 10 } = dto;
@@ -433,31 +448,31 @@ async verifyPayment(bookingRef: string) {
     };
   }
 
-  async getMyParkingAvenueList(parkingAvenueOwnerId: string, cursor?: string){
-    
+  async getMyParkingAvenueList(parkingAvenueOwnerId: string, cursor?: string) {
+
     const parkingAvenues = await this.databaseService.parkingAvenue.findMany(
       {
         cursor: cursor ? { id: cursor } : undefined,
-        skip: cursor ? 1 : 0, 
+        skip: cursor ? 1 : 0,
         where: {
           ownerId: parkingAvenueOwnerId,
         },
         orderBy: {
-            id: 'asc',
-          },
-          take: PAGE_SIZE + 1
+          id: 'asc',
+        },
+        take: PAGE_SIZE + 1
       }
     );
 
-    if(!parkingAvenues){
+    if (!parkingAvenues) {
       throw new NotFoundException("You do not have any parking avenues");
     }
 
     return this.paginate(parkingAvenues);
   }
 
-    async getMyParkingAvenueDetail(parkingAvenueOwnerId: string, parkingAvenueId: string){
-    
+  async getMyParkingAvenueDetail(parkingAvenueOwnerId: string, parkingAvenueId: string) {
+
     const parkingAvenue = await this.databaseService.parkingAvenue.findFirst(
       {
         where: {
@@ -467,15 +482,15 @@ async verifyPayment(bookingRef: string) {
       }
     );
 
-    if(!parkingAvenue){
+    if (!parkingAvenue) {
       throw new NotFoundException("You do not have any parking avenues");
     }
 
     return parkingAvenue;
   }
 
-  async getParkingAvenueByName(getParkingAvenueByName: GetNameParkingAvenueDto){
-    
+  async getParkingAvenueByName(getParkingAvenueByName: GetNameParkingAvenueDto) {
+
     const parkingAvenue = await this.databaseService.parkingAvenue.findUnique(
       {
         where: {
@@ -496,36 +511,28 @@ async verifyPayment(bookingRef: string) {
       }
     );
 
-    if(!parkingAvenue){
+    if (!parkingAvenue) {
       throw new NotFoundException("Parking avenue with this name doesn't exist")
     }
 
     return parkingAvenue;
-    
+
   }
 
-  async update(parkingAvenueId: string, updateParkingAvenueDto: UpdateParkingAvenueDto, parkingAvenueOwnerId: string){
+  async update(parkingAvenueId: string, updateParkingAvenueDto: UpdateParkingAvenueDto, parkingAvenueOwnerId: string) {
 
-    const parkingAvenueOwnerCheck = await this.databaseService.parkingAvenueOwner.findUnique({
-      where: { id: parkingAvenueOwnerId },
+
+    const parkingAvenueOwnerCheck = await this.databaseService.parkingAvenue.findFirst({
+      where: {
+        id: parkingAvenueId,
+        ownerId: parkingAvenueOwnerId,
+      },
     });
-    
+
     if (!parkingAvenueOwnerCheck) {
-          throw new NotFoundException(
-            'Only parking avenue owners can update warden account',
-          );
-    }
-
-    const parkingAvenue = await this.databaseService.parkingAvenue.findUnique(
-      {
-        where: {
-          id: parkingAvenueId
-        }
-      }
-    );
-
-    if(!parkingAvenue){
-      throw new NotFoundException("Parking avenue does not exist");
+      throw new NotFoundException(
+        'Parking avenue not found or you do not have permission to update it',
+      );
     }
 
     return this.databaseService.parkingAvenue.update(
@@ -539,18 +546,18 @@ async verifyPayment(bookingRef: string) {
 
   }
 
-  async remove(parkingAvenueId: string, parkingAvenueOwnerId: string){
+  async remove(parkingAvenueId: string, parkingAvenueOwnerId: string) {
 
     const parkingAvenueOwnerCheck = await this.databaseService.parkingAvenueOwner.findUnique({
       where: { id: parkingAvenueOwnerId },
     });
-    
+
     if (!parkingAvenueOwnerCheck) {
-          throw new NotFoundException(
-            'Only parking avenue owners can delete warden account',
-          );
+      throw new NotFoundException(
+        'Only parking avenue owners can delete warden account',
+      );
     }
-    
+
     const parkingAvenue = await this.databaseService.parkingAvenue.findUnique(
       {
         where: {
@@ -559,7 +566,7 @@ async verifyPayment(bookingRef: string) {
       }
     )
 
-    if(!parkingAvenue){
+    if (!parkingAvenue) {
       throw new NotFoundException("Parking Avenue does not exist")
     }
 
@@ -574,7 +581,7 @@ async verifyPayment(bookingRef: string) {
 
   }
 
-  async addImage(createParkingAvenueImageDto: CreateParkingAvenueImageDto, parkingAvenueOwnerId: string){
+  async addImage(createParkingAvenueImageDto: CreateParkingAvenueImageDto, parkingAvenueOwnerId: string) {
 
     const parkingAvenueOwnerCheck =
       await this.databaseService.parkingAvenueOwner.findUnique({
@@ -595,11 +602,11 @@ async verifyPayment(bookingRef: string) {
       }
     );
 
-    if(!parkingAvenueId){
+    if (!parkingAvenueId) {
       throw new NotFoundException("This parking avenue does not exist");
     }
 
-    return this.databaseService.parkingAvenueImage.create(
+    return await this.databaseService.parkingAvenueImage.create(
       {
         data: createParkingAvenueImageDto
       }
@@ -608,7 +615,7 @@ async verifyPayment(bookingRef: string) {
 
   }
 
-  async getMyParkingAvenueImages(getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, parkingAvenueOwnerId: string){
+  async getMyParkingAvenueImages(getMyParkingAvenueDetailDto: GetMyParkingAvenueDetailDto, parkingAvenueOwnerId: string) {
 
     const parkingAvenue = await this.databaseService.parkingAvenue.findFirst(
       {
@@ -622,7 +629,7 @@ async verifyPayment(bookingRef: string) {
       }
     );
 
-    if(!parkingAvenue){
+    if (!parkingAvenue) {
       throw new NotFoundException("You do not have any parking avenues");
     }
 
@@ -630,15 +637,15 @@ async verifyPayment(bookingRef: string) {
   }
 
 
-  async createParkingAvenueByAdmin(createParkingAvenueByAdminDto: CreateParkingAvenueByAdminDto, adminId : string) {
+  async createParkingAvenueByAdmin(createParkingAvenueByAdminDto: CreateParkingAvenueByAdminDto, adminId: string) {
 
     const isAdmin = await this.databaseService.admin.findUnique({
-            where: {
-              id: adminId
-            }
-          });
-    
-    if(!isAdmin){
+      where: {
+        id: adminId
+      }
+    });
+
+    if (!isAdmin) {
       throw new UnauthorizedException("Only admin is allowed to view approval status")
     }
 
@@ -669,26 +676,26 @@ async verifyPayment(bookingRef: string) {
     }
 
     if (createParkingAvenueByAdminDto.type === ParkingAvenueType.OFF_STREET) {
-        if (createParkingAvenueByAdminDto.endLatitude || createParkingAvenueByAdminDto.endLongitude) {
-            throw new BadRequestException('End coordinates are not required for OFF_STREET parking. Please remove them.');
-        }
+      if (createParkingAvenueByAdminDto.endLatitude || createParkingAvenueByAdminDto.endLongitude) {
+        throw new BadRequestException('End coordinates are not required for OFF_STREET parking. Please remove them.');
+      }
     }
 
     if (createParkingAvenueByAdminDto.type === ParkingAvenueType.ON_STREET) {
-        if (!createParkingAvenueByAdminDto.endLatitude || !createParkingAvenueByAdminDto.endLongitude) {
-            throw new BadRequestException('End latitude and longitude are required for ON_STREET parking');
-        }
+      if (!createParkingAvenueByAdminDto.endLatitude || !createParkingAvenueByAdminDto.endLongitude) {
+        throw new BadRequestException('End latitude and longitude are required for ON_STREET parking');
+      }
     }
     const endLatitude = createParkingAvenueByAdminDto.endLatitude ?? createParkingAvenueByAdminDto.latitude;
     const endLongitude = createParkingAvenueByAdminDto.endLongitude ?? createParkingAvenueByAdminDto.longitude;
 
     const { username, ...parkingData } = createParkingAvenueByAdminDto;
 
-    
+
 
     return this.databaseService.parkingAvenue.create({
-      data: { 
-        ...parkingData, 
+      data: {
+        ...parkingData,
         endLatitude,
         endLongitude,
         ownerId: owner.id

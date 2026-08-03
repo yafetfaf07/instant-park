@@ -17,6 +17,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { IncidentReportModule } from './incident-report/incident-report.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { CustomerModule } from './customer/customer.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { APP_GUARD } from '@nestjs/core';
       ttl: 60000, 
       limit: 20,  
     }]),
+    CustomerModule,
   ],
   controllers: [AppController],
   providers: [

@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { EmailModule } from 'src/email/email.module';
+import { AiInsightService } from 'src/ai-analytics/ai-insight.service';
 
 @Module({
   imports: [
@@ -31,7 +32,7 @@ import { EmailModule } from 'src/email/email.module';
       }),
     ],
   controllers: [ParkingAvenueOwnerController],
-  providers: [ParkingAvenueOwnerService],
+  providers: [ParkingAvenueOwnerService,AiInsightService],
   exports: [ParkingAvenueOwnerService]
 })
 export class ParkingAvenueOwnerModule {}

@@ -164,6 +164,7 @@ export class WardenService {
             },
             data: {
               lastLogin: new Date(),
+              wardenStatus: WardenStatus.ONDUTY
             },
           });
 
@@ -212,6 +213,24 @@ export class WardenService {
 
   }
 
+  async logout(wardenId: string) {
+    const warden = await this.databaseService.warden.findUnique({
+      where: { id: wardenId },
+    });
+
+    if (!warden) {
+      throw new NotFoundException("Warden not found");
+    }
+
+    await this.databaseService.warden.update({
+      where: { id: wardenId },
+      data: {
+        wardenStatus: WardenStatus.OFFDUTY,
+      },
+    });
+
+    return { message: 'Logged out successfully', accessToken: null };
+  }
 
   async findAll(parkingAvenueId: string, parkingAvenueOwnerId: string) {
 

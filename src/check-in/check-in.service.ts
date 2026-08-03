@@ -126,15 +126,17 @@ export class CheckInService {
 
         let amountDue = 0;
 
-        // Prevent double-charging by checking reservation duration
+        // Prevent double-charging by checking reservation duration, but apply penalty for overstays
         if (checkIn.reservationId && checkIn.reservation) {
             const reservedHours = checkIn.reservation.durationHours;
             if (hoursStayed > reservedHours) {
                 const extraHours = hoursStayed - reservedHours;
-                amountDue = extraHours * checkIn.parkingAvenue.hourlyRate;
+                // PENALTY: Double the normal hourly rate for every overstayed hour
+                const penaltyRate = checkIn.parkingAvenue.hourlyRate * 2;
+                amountDue = extraHours * penaltyRate;
             }
         } else {
-            // Walk-in: Charge for the total time
+            // Walk-in: Charge standard hourly rate for the total time
             amountDue = hoursStayed * checkIn.parkingAvenue.hourlyRate;
         }
 
@@ -153,7 +155,7 @@ export class CheckInService {
             });
 
             return {
-                message: 'Payment required for check-out',
+                message: checkIn.reservationId ? 'Overstay penalty payment required for check-out' : 'Payment required for check-out',
                 licensePlate,
                 hoursStayed,
                 amountDue,
